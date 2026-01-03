@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:clickable="true"
+    android:focusable="true"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <ImageView
+        android:id="@+id/back_btn_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/back"
+        android:layout_marginTop="76dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/address_title_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="학교/직장 주소를\n입력해주세요"
+        android:layout_marginTop="40dp"
+        android:textAppearance="@style/heading2_Semibold"
+        app:layout_constraintTop_toBottomOf="@id/back_btn_iv"
+        app:layout_constraintStart_toStartOf="@id/back_btn_iv"/>
+
+    <TextView
+        android:id="@+id/address_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="해당 정보를 기준으로 직주거리를 계산해드릴게요!"
+        android:textAppearance="@style/body2_Median"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="@id/address_title_tv"
+        app:layout_constraintTop_toBottomOf="@id/address_title_tv"/>
+
+
+    <FrameLayout
+        android:id="@+id/address_input_fl"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="@drawable/text_btn"
+        android:layout_marginTop="40dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/address_des_tv">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:requiresFadingEdge="horizontal"
+            android:fadingEdgeLength="30dp">
+            <TextView
+                android:id="@+id/address_input_tv"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="학교/직장 주소"
+                android:gravity="center_vertical|start"
+                android:textColor="@color/gray_500"
+                android:textAppearance="@style/body1_Regular"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"/>
+        </HorizontalScrollView>
+        </FrameLayout>
+<!--    <TextView-->
+<!--        android:id="@+id/address_input_tv"-->
+<!--        android:layout_width="360dp"-->
+<!--        android:layout_height="48dp"-->
+<!--        android:background="@drawable/text_btn"-->
+<!--        android:text="학교/직장 주소"-->
+<!--        android:gravity="center_vertical|start"-->
+<!--        android:paddingStart="16dp"-->
+<!--        android:textColor="@color/gray_500"-->
+<!--        android:layout_marginTop="40dp"-->
+<!--        android:textAppearance="@style/body1_Regular"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/address_des_tv"/>-->
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/address_next_btn_mb"
+        style="@style/btn_L"
+        android:backgroundTint="@color/brand_700"
+        android:text="다음으로"
+        android:textColor="@color/white"
+        android:layout_marginBottom="68dp"
+        android:textAppearance="@style/body1_Semibold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+    />
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="276dp"
+    android:layout_height="340dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_marginEnd="14dp"
+    android:background="@drawable/gray_bg20">
+
+    <TextView
+        android:id="@+id/ing_card_rank_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_100"
+        android:text="A"
+        android:gravity="center"
+        android:textColor="@color/brand_800"
+        android:textAppearance="@style/caption1_Semibold"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/ing_card_address_tv"
+        android:layout_width="236dp"
+        android:layout_height="56dp"
+        android:text="서울특별시 동동시 \n동동로 50길 333-333"
+        android:textAppearance="@style/heading2_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_rank_tv" />
+
+    <TextView
+        android:id="@+id/ing_card_date_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="YYYY-MM-DD HH:MM 탐색 예정"
+        android:textColor="@color/gray_400"
+        android:textAppearance="@style/caption1_Median"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_address_tv"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/ing_card_img_rv"
+        android:layout_width="224dp"
+        android:layout_height="wrap_content"
+        android:minHeight="60dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginStart="20dp"
+        android:orientation="horizontal"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_date_tv"/>
+
+    <LinearLayout
+        android:id="@+id/ing_card_direction_ll"
+        android:layout_width="230dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/black_badge"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_img_rv">
+
+        <TextView
+            android:id="@+id/ing_card_direction_badge_tv"
+            android:layout_width="86dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="12dp"
+            android:gravity="center"
+            android:text="방향 측정 미완료"
+            android:background="@drawable/gray_circle_badge"
+            android:textAppearance="@style/caption2_Semibold"
+            android:textColor="@color/gray_600"/>
+
+        <TextView
+            android:id="@+id/ing_card_direction_tv"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:layout_marginEnd="12dp"
+            android:text="방향 측정 완료"
+            android:textAppearance="@style/caption1_Median"
+            android:textColor="@color/gray_600"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ing_card_light_ll"
+        android:layout_width="230dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/black_badge"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_direction_ll">
+
+        <TextView
+            android:id="@+id/ing_card_light_badge_tv"
+            android:layout_width="86dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="12dp"
+            android:gravity="center"
+            android:text="채광 측정 미완료"
+            android:background="@drawable/gray_circle_badge"
+            android:textAppearance="@style/caption2_Semibold"
+            android:textColor="@color/gray_600"
+/>
+
+        <TextView
+            android:id="@+id/ing_card_light_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:layout_marginEnd="12dp"
+            android:text="채광 측정 완료"
+            android:textAppearance="@style/caption1_Median"
+            android:textColor="@color/gray_600" />
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/ing_card_btn"
+        style="@style/btn_M"
+        android:backgroundTint="@color/brand_700"
+        android:text="측정하기"
+        android:textColor="@color/white"
+        android:textAppearance="@style/body1_Semibold"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_card_light_ll"/>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

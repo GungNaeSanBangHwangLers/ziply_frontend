@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@drawable/gray_bg16"
+    android:layout_width="276dp"
+    android:layout_height="366dp"
+    android:layout_marginRight="14dp">
+
+    <TextView
+    android:id="@+id/item_rank_tv"
+    android:layout_width="28dp"
+    android:layout_height="28dp"
+    android:background="@drawable/bg_rank_circle"
+    android:backgroundTint="@color/brand_100"
+    android:text="A"
+    android:gravity="center"
+    android:textColor="@color/brand_800"
+    android:textAppearance="@style/caption1_Semibold"
+    android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/item_rank2_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_700"
+        android:text="c"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:textAppearance="@style/caption1_Semibold"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/item_rank_tv"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/item_direction_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="남향"
+        android:textAppearance="@style/body1_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/item_rank2_tv"/>
+
+    <TextView
+        android:id="@+id/item_direction_des_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="10dp"
+        android:text="하루 종일 햇빛이 고르게 들어와요. 집에 머무는 시간이 많고 쾌적한 주거환경을 선호하는 분꼐 추천드려요."
+        android:textAppearance="@style/caption1_Median"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/item_direction_tv"/>
+
+    <LinearLayout
+        android:id="@+id/item_good_ll"
+        android:layout_width="236dp"
+        android:layout_height="84dp"
+        android:background="@drawable/black_badge2"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/item_direction_des_tv">
+        <TextView
+            android:id="@+id/item_good_badge_tv"
+            android:layout_width="86dp"
+            android:layout_height="20dp"
+            android:gravity="center"
+            android:background="@drawable/good_badge"
+            android:text="이런 점이 좋아요"
+            android:textAppearance="@style/caption2_Semibold"
+            android:textColor="@color/brand_800"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="10dp"/>
+
+        <TextView
+            android:id="@+id/item_good_des_tv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/caption1_Median"
+            android:text="겨울에는 따뜻하고 여름에는 시원해서 냉난방비를 줄일 수 있어요."
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/item_bad_ll"
+        android:layout_width="236dp"
+        android:layout_height="84dp"
+        android:background="@drawable/black_badge2"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/item_good_ll">
+        <TextView
+            android:id="@+id/item_bad_badge_tv"
+            android:layout_width="94dp"
+            android:layout_height="20dp"
+            android:gravity="center"
+            android:background="@drawable/bad_badge"
+            android:text="이런 점은 불편해요"
+            android:textAppearance="@style/caption2_Semibold"
+            android:textColor="@color/error_800"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="10dp"/>
+
+        <TextView
+            android:id="@+id/item_bad_des_tv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/caption1_Median"
+            android:text="보통 월세 가격이 비싸고, 매물이 적을 수 있어요. 햇빛 때문에 가구 변색이 있을 수 있어요."
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

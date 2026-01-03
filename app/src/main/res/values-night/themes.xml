@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Zply" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_900</item>
+        <item name="android:windowBackground">@drawable/gradient_main_background</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+</resources>

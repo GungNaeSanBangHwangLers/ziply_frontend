@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="106dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/rank_card_layout"
+        android:layout_width="96.67dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/gray_bg16"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+
+        <TextView
+            android:id="@+id/item_rank_tv"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/bg_rank_circle"
+            android:backgroundTint="@color/brand_100"
+            android:text="A"
+            android:gravity="center"
+            android:textColor="@color/brand_800"
+            android:textAppearance="@style/caption1_Semibold"
+            android:layout_marginTop="14dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/item_minute_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="30분"
+            android:textAppearance="@style/caption1_Semibold"
+            android:layout_marginTop="6dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/item_rank_tv"/>
+
+        <TextView
+            android:id="@+id/item_min_max_tv"
+            android:layout_width="38dp"
+            android:layout_height="20dp"
+            android:text="최소"
+            android:textColor="@color/brand_800"
+            android:textAppearance="@style/caption2_Semibold"
+            android:background="@drawable/bg_badge_min"
+            android:gravity="center"
+            android:visibility="visible"
+            android:layout_marginTop="6dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/item_minute_tv"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <ImageView
+        android:id="@+id/item_arrow_tv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/back_gray"
+        app:layout_constraintStart_toEndOf="@id/rank_card_layout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

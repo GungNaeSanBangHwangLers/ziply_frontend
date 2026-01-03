@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="64dp"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingVertical="8dp">
+
+    <TextView
+        android:id="@+id/date_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="MON"
+        android:includeFontPadding="false"
+        android:gravity="center"
+        android:textAppearance="@style/caption1_Regular" />
+
+    <TextView
+        android:id="@+id/day_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="3"
+        android:textStyle="bold"
+        android:layout_marginTop="2dp"
+        android:includeFontPadding="false"
+        android:gravity="center"
+        android:textAppearance="@style/heading2_Semibold" />
+
+</LinearLayout>

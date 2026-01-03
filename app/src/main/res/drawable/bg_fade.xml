@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="0"
+        android:startColor="#00FFFFFF"
+        android:endColor="@color/black"
+        android:type="linear" />
+    <!-- startColor: 투명, endColor: 흰색 (배경색과 맞춰주세요) -->
+</shape>

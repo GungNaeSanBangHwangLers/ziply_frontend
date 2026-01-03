@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/toast_success"
+    android:paddingStart="20dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="6dp">
+
+    <!-- 3. 아이콘 (Gap 8dp 적용) -->
+    <ImageView
+    android:id="@+id/ivToastIcon"
+    android:layout_width="24dp"
+    android:layout_height="24dp"
+    android:layout_marginEnd="8dp"
+    android:src="@drawable/check"
+    tools:ignore="ContentDescription" />
+
+        <!-- 4. 텍스트 메시지 -->
+    <TextView
+    android:id="@+id/tvToastMessage"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="측정을 완료했어요"
+        android:textColor="@color/brand_950"
+        android:textAppearance="@style/body2_Semibold"
+    android:includeFontPadding="false" />
+
+</LinearLayout>

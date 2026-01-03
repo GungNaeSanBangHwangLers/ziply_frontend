@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/login_toast_error"
+    android:paddingStart="20dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="6dp">
+
+    <!-- 3. 아이콘 (Gap 8dp 적용) -->
+    <ImageView
+    android:id="@+id/ivToastIcon"
+    android:layout_width="20dp"
+    android:layout_height="20dp"
+    android:layout_marginEnd="8dp"
+    android:src="@drawable/warning"
+    tools:ignore="ContentDescription" />
+        <!-- (참고: ic_error는 가지고 계신 빨간 아이콘 이름으로 바꾸세요) -->
+
+        <!-- 4. 텍스트 메시지 -->
+    <TextView
+    android:id="@+id/tvToastMessage"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="로그인에 실패했어요. 다시 시도해주세요."
+    android:textColor="#4A2020"
+    android:textSize="14sp"
+    android:includeFontPadding="false" />
+
+</LinearLayout>

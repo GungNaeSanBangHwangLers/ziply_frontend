@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ImageView
+        android:id="@+id/ing_back_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/back"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/ing_my_address_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/heading2_Semibold"
+        android:text="{서울특별시 동작구 상도로 396}"
+        android:layout_marginTop="34dp"
+        android:layout_marginEnd="20dp"
+        app:layout_constraintStart_toStartOf="@id/ing_back_iv"
+        app:layout_constraintTop_toBottomOf="@id/ing_back_iv"/>
+
+    <TextView
+        android:id="@+id/ing_address_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="오늘 탐색하는 집에 대한 정보를 측정할게요"
+        android:layout_marginTop="10dp"
+        android:textAppearance="@style/body2_Median"
+        app:layout_constraintStart_toStartOf="@id/ing_my_address_tv"
+        app:layout_constraintTop_toBottomOf="@id/ing_my_address_tv"/>
+
+    <include
+        android:id="@+id/ing_progress_layout"
+        layout="@layout/layout_step_progress_ing"
+        android:layout_width="320dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="@id/ing_address_des_tv"
+        app:layout_constraintTop_toBottomOf="@id/ing_address_des_tv"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/ing_card_rv"
+        android:layout_width="320dp"
+        android:layout_height="340dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_progress_layout"
+        tools:listitem="@layout/item_ing_card"
+        />
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

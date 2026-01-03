@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@color/gray_900"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <FrameLayout
+        android:id="@+id/view_container"
+        android:layout_width="46dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <View
+            android:id="@+id/handle_bar"
+            android:layout_width="39dp"
+            android:layout_height="2.6dp"
+            android:background="@color/white"
+            android:layout_marginStart="3.74dp"
+            android:layout_marginTop="10.7dp"
+            />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/ing_bot_title_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="방향을 기록할게요"
+        android:textAppearance="@style/heading2_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/view_container"/>
+    <TextView
+        android:id="@+id/ing_bot_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="창문 방향으로 서서 \n입력하기 버튼을 눌러주세요."
+        android:textAppearance="@style/body2_Median"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_bot_title_tv"/>
+
+    <LinearLayout
+        android:id="@+id/tmp_direction_ll"
+        android:layout_width="320dp"
+        android:layout_height="58dp"
+        android:background="@drawable/black_26"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_bot_des_tv">
+
+        <TextView
+            android:id="@+id/tmp_direction_des_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="현재 방위각"
+            android:textAppearance="@style/body2_Regular"
+            android:textColor="@color/gray_400"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="18dp"/>
+
+        <TextView
+            android:id="@+id/tmp_direction_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="{NN}°"
+            android:textAppearance="@style/heading2_Semibold"
+            android:layout_marginStart="63dp"
+            android:layout_marginTop="15dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tmp_direction_input_mb"
+            style="@style/btn_SS"
+            android:visibility="visible"
+            android:backgroundTint="@color/brand_700"
+            android:text="입력"
+            android:textColor="@color/white"
+            android:layout_marginStart="63dp"
+            android:layout_marginTop="12dp"
+            />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tmp_direction_input_plus_mb"
+            android:visibility="gone"
+            style="@style/btn_MSS"
+            android:backgroundTint="@color/brand_700"
+            android:text="추가 입력"
+            android:textColor="@color/white"
+            android:layout_marginStart="50.5dp"
+            android:layout_marginTop="12dp"
+            />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/tmp_rv"
+        android:layout_width="320dp"
+        android:layout_height="188dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tmp_direction_ll"
+        tools:listitem="@layout/item_ing_bottom_direction"
+        />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/tmp_direction_ok_mb"
+        style="@style/btn_L"
+        android:backgroundTint="@color/gray_700"
+        android:text="완료하기"
+        android:textColor="@color/white"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

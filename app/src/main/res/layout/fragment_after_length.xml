@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <TextView
+        android:id="@+id/after_length_rank_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="직주거리는 {}가 \n가장 짧아요"
+        android:textAppearance="@style/body1_Semibold"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/after_length_rank_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="도보거리를 기준으로 직주거리를 알려드릴게요"
+        android:textAppearance="@style/caption1_Median"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="@id/after_length_rank_tv"
+        app:layout_constraintTop_toBottomOf="@id/after_length_rank_tv"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/after_length_rank_rv"
+        android:layout_width="320dp"
+        android:layout_height="106dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toStartOf="@id/after_length_rank_des_tv"
+        app:layout_constraintTop_toBottomOf="@id/after_length_rank_des_tv"
+        tools:listitem="@layout/item_length_rank"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

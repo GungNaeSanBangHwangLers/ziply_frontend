@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="264dp"
+    android:layout_height="88dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@drawable/gray_bg"
+    android:layout_marginEnd="10dp">
+
+    <TextView
+        android:id="@+id/explore_rank_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_100"
+        android:text="A"
+        android:gravity="center"
+        android:textColor="@color/brand_800"
+        android:textAppearance="@style/caption1_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+
+    <TextView
+        android:id="@+id/explore_date_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="16dp"
+        android:text="0000년 00월 00일 00시 00분 탐색"
+        android:textAppearance="@style/caption2_Regular"
+        android:textColor="@color/brand_100"
+        app:layout_constraintStart_toEndOf="@id/explore_rank_tv"
+        app:layout_constraintTop_toTopOf="parent"/>
+    <TextView
+        android:id="@+id/explore_address"
+        android:layout_width="152dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="4dp"
+        android:text="서울특별시 동동시 \n동동로 50길 333-333"
+        android:textAppearance="@style/caption1_Semibold"
+        app:layout_constraintStart_toStartOf="@id/explore_date_tv"
+        app:layout_constraintTop_toBottomOf="@id/explore_date_tv"/>
+    <ImageView
+        android:id="@+id/explore_write_iv"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="14dp"
+        android:src="@drawable/write"
+        app:layout_constraintTop_toTopOf="@id/explore_date_tv"
+        app:layout_constraintBottom_toBottomOf="@id/explore_address"
+        app:layout_constraintStart_toEndOf="@id/explore_address"/>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

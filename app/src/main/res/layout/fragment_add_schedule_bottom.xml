@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_bottom_sheet"
+    android:paddingBottom="20dp">
+
+    <FrameLayout
+        android:id="@+id/view_container"
+        android:layout_width="46dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <View
+            android:id="@+id/handle_bar"
+            android:layout_width="39dp"
+            android:layout_height="2.6dp"
+            android:background="@color/white"
+            android:layout_marginStart="3.74dp"
+            android:layout_marginTop="10.7dp"
+            />
+    </FrameLayout>
+
+
+
+    <TextView
+        android:id="@+id/schedule_title_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="탐색할 집의\n도로명주소를 입력해주세요"
+        android:layout_marginTop="34dp"
+        android:textAppearance="@style/heading2_Semibold"
+        android:layout_marginStart="20dp"
+        app:layout_constraintTop_toBottomOf="@id/view_container"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <EditText
+        android:id="@+id/schedule_input_et"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="@drawable/text_btn"
+        android:hint="탐색 주거 도로명주소"
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/white"
+        android:textColorHint="@color/gray_500"
+        android:textAppearance="@style/body1_Regular"
+        android:maxLines="1"
+        android:inputType="text"
+        app:layout_constraintTop_toBottomOf="@id/schedule_title_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/schedule_date_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="탐색할 날짜와 시간을\n입력해주세요"
+        android:layout_marginTop="34dp"
+        android:textAppearance="@style/heading2_Semibold"
+        android:layout_marginStart="20dp"
+        app:layout_constraintTop_toBottomOf="@id/schedule_input_et"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <TextView
+        android:id="@+id/schedule_date_display_tv"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="20dp"
+        android:background="@drawable/text_btn"
+        android:gravity="center_vertical"
+        android:text="YYYY-MM-DD"
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/gray_500"
+        android:textAppearance="@style/body1_Regular"
+        app:layout_constraintTop_toBottomOf="@id/schedule_date_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ViewFlipper
+        android:id="@+id/date_time_flipper"
+        android:layout_width="320dp"
+        android:layout_height="wrap_content"
+        tools:visibility="gone"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/schedule_date_display_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:gravity="center"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:id="@+id/btn_prev_month"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/back"
+                    android:padding="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_year_month"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2025년 01월"
+                    android:textAppearance="@style/body1_Semibold"
+                    android:layout_marginHorizontal="40dp"/>
+
+                <ImageView
+                    android:id="@+id/btn_next_month"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/next"
+                    android:padding="4dp"/>
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="64dp">
+
+                <View
+                    android:layout_width="38dp"
+                    android:layout_height="64dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/center_mask"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/dateRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"/>
+            </FrameLayout>
+        </LinearLayout>
+        <FrameLayout
+            android:id="@+id/time_picker_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp">
+
+            <FrameLayout
+                android:id="@+id/picker_inner_frame"
+                android:layout_width="200dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center_horizontal">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="33dp"
+                    android:background="#55FFFFFF"
+                    android:clickable="false"
+                    android:focusable="false"/>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="66dp"
+                    android:background="#55FFFFFF"
+                    android:clickable="false"
+                    android:focusable="false"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:weightSum="100">
+
+                    <com.keder.zply.FixedRecyclerView
+                        android:id="@+id/hourRecyclerView"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="35"
+                        android:paddingVertical="33dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"
+                        android:scrollbars="none"/>
+
+                    <TextView
+                        android:id="@+id/time_colon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:text=":"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:includeFontPadding="false"/>
+
+                    <com.keder.zply.FixedRecyclerView
+                        android:id="@+id/minuteRecyclerView"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="35"
+                        android:paddingVertical="33dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"
+                        android:scrollbars="none"/>
+
+                    <com.keder.zply.FixedRecyclerView
+                        android:id="@+id/ampmRecyclerView"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="30"
+                        android:paddingVertical="33dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"
+                        android:scrollbars="none"/>
+
+                </LinearLayout>
+            </FrameLayout>
+        </FrameLayout>
+    </ViewFlipper>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/address_next_btn_mb"
+        style="@style/btn_L"
+        android:backgroundTint="@color/brand_700"
+        android:text="입력하기"
+        android:textColor="@color/white"
+        android:layout_marginBottom="10dp"
+        android:textAppearance="@style/body1_Semibold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <ImageView
+        android:id="@+id/after_back_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/back"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/after_my_address_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/heading2_Semibold"
+        android:text="{서울특별시 동작구 상도로 396}"
+        android:layout_marginTop="34dp"
+        android:layout_marginEnd="20dp"
+        app:layout_constraintStart_toStartOf="@id/after_back_iv"
+        app:layout_constraintTop_toBottomOf="@id/after_back_iv"/>
+
+    <TextView
+        android:id="@+id/after_address_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="오늘 탐색하는 집에 대한 정보를 측정할게요"
+        android:layout_marginTop="10dp"
+        android:textAppearance="@style/body2_Median"
+        app:layout_constraintStart_toStartOf="@id/after_my_address_tv"
+        app:layout_constraintTop_toBottomOf="@id/after_my_address_tv"/>
+
+    <include
+        android:id="@+id/after_progress_layout"
+        layout="@layout/layout_step_progress_finish"
+        android:layout_width="320dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="@id/after_address_des_tv"
+        app:layout_constraintTop_toBottomOf="@id/after_address_des_tv"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/after_card_rv"
+        android:layout_width="320dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="34dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/after_progress_layout"
+        tools:listitem="@layout/after_explore_card"
+        />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/after_tab_layout"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="40dp"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="@color/brand_500"
+        app:tabTextColor="@color/gray_600"
+        app:tabTextAppearance="@style/body2_Semibold"
+        app:tabIndicatorColor="@color/brand_500"
+        android:background="@color/black"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/after_card_rv"/>
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/after_viewpager"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="40dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/after_tab_layout"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

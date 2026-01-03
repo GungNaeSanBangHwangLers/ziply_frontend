@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="320dp"
+    android:layout_height="234dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@drawable/gray_bg20">
+
+    <ImageView
+        android:id="@+id/alert_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/warning"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+        android:id="@+id/alert_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="주의 해주세요!"
+        android:textAppearance="@style/heading2_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/alert_iv"/>
+
+    <TextView
+        android:id="@+id/alert_des_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="정확한 채광 측정을 위해 \n조명을 끄고 측정을 진행해주세요."
+        android:textAppearance="@style/body2_Median"
+        android:layout_marginTop="10dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/alert_tv"/>
+
+    <LinearLayout
+        android:id="@+id/btns_ll"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/alert_des_tv">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/alert_cancel_btn"
+            style="@style/btn_MS"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/gray_700"
+            android:text="취소" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/alert_ok_btn"
+            style="@style/btn_MS"
+            android:backgroundTint="@color/brand_700"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/white"
+            android:text="확인했어요" />
+
+
+    </LinearLayout>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
