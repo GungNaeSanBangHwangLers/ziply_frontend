@@ -58,7 +58,7 @@ class CompanyAddressFragment : Fragment() {
 
         binding.addressNextBtnMb.setOnClickListener {
             if(selectedAddress.isNullOrEmpty()){
-                showCustomToast("주소를 입력해주세요")
+                showCustomToast("전체 내용을 입력해주세요")
             }else{
                 // [수정] 임시 저장소에 직장 주소 저장
                 saveAddressToDraft(selectedAddress!!)

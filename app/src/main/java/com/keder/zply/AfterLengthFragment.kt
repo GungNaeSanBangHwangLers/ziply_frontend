@@ -9,11 +9,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.keder.zply.databinding.FragmentAfterLengthBinding
+import kotlinx.coroutines.launch
 
 class AfterLengthFragment : Fragment() {
-
     private var _binding: FragmentAfterLengthBinding? = null
     private val binding get() = _binding!!
 
@@ -24,41 +25,62 @@ class AfterLengthFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        loadDistanceData()
+    }
 
-        val activity = requireActivity() as? AfterExploreActivity
-        val session = activity?.currentSession
+    private fun loadDistanceData() {
+        val activity = requireActivity() as? AfterExploreActivity ?: return
+        val cardId = activity.currentCardId
+        if (cardId.isEmpty()) return
 
-        // 데이터가 없어도 죽지 않고 빈 리스트로 처리
-        val safeList = session?.scheduleList ?: emptyList()
-        val sortedList = safeList.sortedBy { it.time }
+        lifecycleScope.launch {
+            try {
+                // API 호출
+                val response = RetrofitClient.getInstance(requireContext()).getAnalysisDistance(cardId)
 
-        if (sortedList.isNotEmpty()) {
-            binding.afterLengthRankRv.adapter = LengthRankAdapter(sortedList)
-            binding.afterLengthRankRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-            updateShortestText(sortedList)
-        } else {
-            // 리스트가 비어있다면 처리 (필요시 안내 텍스트 표시)
-            // binding.afterLengthRankRv.visibility = View.GONE
-            // binding.emptyView.visibility = View.VISIBLE
+                if (response.isSuccessful && response.body() != null) {
+                    val basePoints = response.body()!!.basePoints
+                    if (basePoints.isNotEmpty()) {
+                        val results = basePoints[0].results // 첫 번째 기준지(회사) 사용
+
+                        // 데이터를 UI 모델로 변환
+                        val uiList = results.map { res ->
+                            ScheduleItem(
+                                houseId = res.houseId,
+                                walkingTimeMin = res.walkingTimeMin,
+                                walkingDistanceKm = res.walkingDistanceKm,
+                                // 액티비티의 마스터 리스트에서 랭크와 주소 가져오기
+                                rankLabel = activity.getRankLabel(res.houseId),
+                                address = activity.getAddress(res.houseId),
+                                time = "" // 랭킹 화면에선 시간 불필요
+                            )
+                        }.sortedBy { it.rankLabel } // A, B, C 순서 정렬
+
+                        binding.afterLengthRankRv.adapter = LengthRankAdapter(uiList)
+                        binding.afterLengthRankRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+
+                        updateShortestText(uiList)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     private fun updateShortestText(list: List<ScheduleItem>) {
         if (list.isNotEmpty()) {
-            val shortestRank = "A"
+            // 시간이 가장 짧은 항목 찾기
+            val bestItem = list.minByOrNull { it.walkingTimeMin }
+            val shortestRank = bestItem?.rankLabel ?: "-"
+
             val fullText = "직주거리는 $shortestRank 가 \n가장 짧아요"
             val spannable = SpannableString(fullText)
-
-            val startIndex = fullText.indexOf(shortestRank)
-            if (startIndex != -1) {
-                val endIndex = startIndex + shortestRank.length
-                val blueColor = ContextCompat.getColor(requireContext(), R.color.brand_500)
-
+            val index = fullText.indexOf(shortestRank)
+            if (index != -1) {
                 spannable.setSpan(
-                    ForegroundColorSpan(blueColor),
-                    startIndex,
-                    endIndex,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    ForegroundColorSpan(ContextCompat.getColor(requireContext(), R.color.brand_500)),
+                    index, index + shortestRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             }
             binding.afterLengthRankTv.text = spannable

@@ -11,7 +11,6 @@ import com.keder.zply.databinding.ItemGraphBarBinding
 
 class GraphAdapter(
     private val items: List<ScheduleItem>,
-    // [수정 1] String? 대신 String (Non-nullable) 사용
     private val onItemClick: (String) -> Unit
 ) : RecyclerView.Adapter<GraphAdapter.ViewHolder>() {
 
@@ -21,7 +20,6 @@ class GraphAdapter(
     fun setMode(isDay: Boolean) {
         this.isDayMode = isDay
         selectedPosition = -1
-        // [수정 1] null 대신 빈 문자열 전달
         onItemClick("")
         notifyDataSetChanged()
     }
@@ -30,9 +28,14 @@ class GraphAdapter(
         fun bind(item: ScheduleItem, position: Int) {
             val context = binding.root.context
 
-            // 1. 랭크 문자, 점수, 막대 높이 설정 (기존 동일)
-            val rankChar = ('A'.code + position).toChar()
-            binding.graphRankTv.text = rankChar.toString()
+            // [수정] 1. 랭크 문자: item.rankLabel 사용
+            val rankString = item.rankLabel
+            val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
+            binding.graphRankTv.text = rankString
+
+            // [수정] 2. 색상 인덱스 계산 (A -> 0, B -> 1 ...)
+            // 기존에는 position을 썼지만, 이제는 랭크 알파벳을 숫자로 변환해서 씀
+            val rankIndex = if (rankChar in 'A'..'Z') rankChar - 'A' else 7
 
             val score = if (isDayMode) item.dayScore else item.nightScore
             val desc = if (isDayMode) item.dayDesc else item.nightDesc
@@ -44,9 +47,9 @@ class GraphAdapter(
             params.height = dpToPx(context, heightDp)
             binding.graphBarView.layoutParams = params
 
-            // 2. 색상 및 Radius 적용 (기존 동일)
-            val rankColor = getRankColor(context, position)
-            val textColor = getRankTextColor(context, position)
+            // 3. 색상 적용 시 rankIndex 사용
+            val rankColor = getRankColor(context, rankIndex)
+            val textColor = getRankTextColor(context, rankIndex)
 
             val drawable = GradientDrawable()
             drawable.shape = GradientDrawable.RECTANGLE
@@ -59,25 +62,17 @@ class GraphAdapter(
             binding.graphRankTv.background.setTint(rankColor)
             binding.graphRankTv.setTextColor(textColor)
 
-            // 3. [수정됨] 선택 상태 UI 로직
-            // 투명도(alpha) 조절 코드 삭제 -> 항상 1.0f 유지
+            // 4. 선택 상태 UI
             binding.root.alpha = 1.0f
 
             if (selectedPosition == position) {
-                // [선택됨]
-                // 배경을 어두운 색으로 설정
                 binding.root.setBackgroundResource(R.drawable.bg_graph)
-                // 점수 글자색 흰색으로
                 binding.graphScoreTv.setTextColor(Color.WHITE)
             } else {
-                // [선택 안 됨 (기본 상태)]
-                // 배경 투명
                 binding.root.setBackgroundColor(Color.TRANSPARENT)
-                // 점수 글자색 회색으로 (어두워지는 효과 제거했으므로 기본 회색 유지)
                 binding.graphScoreTv.setTextColor(ContextCompat.getColor(context, R.color.white))
             }
 
-            // 4. 클릭 이벤트 (기존 동일)
             binding.root.setOnClickListener {
                 if (selectedPosition == position) {
                     selectedPosition = -1
@@ -90,9 +85,10 @@ class GraphAdapter(
             }
         }
     }
-    // 랭크별 색상 정의 (BeforeExploreAdapter와 통일)
-    private fun getRankColor(context: Context, position: Int): Int {
-        return when (position) {
+
+    // [유지] 함수 내부의 position 변수명은 그대로 둬도 되지만, 의미는 'Rank Index'임
+    private fun getRankColor(context: Context, rankIndex: Int): Int {
+        return when (rankIndex) {
             0 -> ContextCompat.getColor(context, R.color.brand_100)
             1 -> ContextCompat.getColor(context, R.color.brand_400)
             2 -> ContextCompat.getColor(context, R.color.brand_700)
@@ -104,9 +100,8 @@ class GraphAdapter(
         }
     }
 
-    // 랭크별 글자 색상 (배경이 밝으면 검은색, 어두우면 흰색)
-    private fun getRankTextColor(context: Context, position: Int): Int {
-        return when (position) {
+    private fun getRankTextColor(context: Context, rankIndex: Int): Int {
+        return when (rankIndex) {
             0 -> ContextCompat.getColor(context, R.color.brand_800)
             4 -> ContextCompat.getColor(context, R.color.black)
             else -> ContextCompat.getColor(context, R.color.white)
@@ -123,7 +118,6 @@ class GraphAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        // [오류 해결] 여기서 items[position]과 position을 정확히 넘겨줍니다.
         holder.bind(items[position], position)
     }
 

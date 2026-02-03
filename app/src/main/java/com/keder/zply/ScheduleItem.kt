@@ -12,6 +12,12 @@ data class ScheduleItem (
     var dayDesc: String = "",
     var nightDesc: String = "",
 
+    var walkingTimeMin : Int = 0,
+    var walkingDistanceKm : Double = 0.0,
+    var houseId : Long = 0,
+
+    var rankLabel : String = "",
+
     var measuredAzimuths : List<Int> = emptyList(),
     var measuredLight : Float = 0f,
     var isMeasured : Boolean = false,
@@ -23,5 +29,18 @@ data class MainCardData(
     val date: String,
     val location : String,
     val count : Int,
-    val sessionIndex : Int,
+    val cardId : String
 )
+
+//data class ReviewCardResponse(
+//    val cardId : String,
+//    val title : String,
+//    val houseCount : Int,
+//    val startDate : String,
+//    val endDate : String,
+//    val status : String
+//)
+//
+//data class UserNameResponse(
+//    val name : String,
+//)

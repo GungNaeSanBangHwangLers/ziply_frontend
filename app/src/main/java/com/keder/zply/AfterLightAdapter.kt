@@ -13,77 +13,77 @@ class LightGraphAdapter(
 ) : RecyclerView.Adapter<LightGraphAdapter.ViewHolder>() {
 
     inner class ViewHolder(val binding: ItemGraphBarBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: ScheduleItem, position: Int) {
+        fun bind(item: ScheduleItem) {
             val context = binding.root.context
 
-            // 1. 랭크 문자 설정 (A, B, C...)
-            val rankChar = ('A'.code + position).toChar()
-            binding.graphRankTv.text = rankChar.toString()
+            // 1. 랭크 문자 설정 (기존 로직 유지)
+            val rankString = item.rankLabel
+            binding.graphRankTv.text = rankString
 
-            // 2. 조도(lux) -> 점수 변환 로직 (기존 로직 유지)
-            val lux = item.measuredLight
-            val score = (lux / 10).toInt().coerceIn(0, 100)
+            // 2. 색상 인덱스 계산 (기존 로직 유지)
+            val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
+            val rankIndex = if (rankChar in 'A'..'Z') {
+                rankChar - 'A'
+            } else {
+                7 // 예외 케이스
+            }
 
-            // 점수 텍스트 표시
+            // ★ [수정됨] 점수 계산 로직만 변경 (나누기 10 제거)
+            // 서버에서 이미 0~100점 사이의 점수를 주므로 그대로 사용
+            val score = item.measuredLight.toInt().coerceIn(0, 100)
             binding.graphScoreTv.text = "${score}점"
 
-            // 3. [스타일 적용] 막대 높이 설정 (GraphAdapter와 동일한 계산 방식 적용)
+            // 3. 막대 높이 설정 (기존 로직 유지)
             val maxBarHeightDp = 100
-            // 점수가 0이어도 최소 4dp는 보이게 설정
             val heightDp = if (score > 0) (score / 100.0 * maxBarHeightDp).toInt() else 4
 
             val params = binding.graphBarView.layoutParams
-            // ConstraintLayout Percent 대신 dp단위로 직접 높이 지정 (디자인 통일)
             params.height = dpToPx(context, heightDp)
             binding.graphBarView.layoutParams = params
 
-            // 4. [스타일 적용] 색상 및 둥근 모서리(Radius) 적용
-            val rankColor = getRankColor(context, position)
-            val textColor = getRankTextColor(context, position)
+            // 4. 색상 적용 (기존 로직 유지)
+            val rankColor = getRankColor(context, rankIndex)
+            val textColor = getRankTextColor(context, rankIndex)
 
-            // 막대(Bar) 배경 생성 (색상 + 둥근 모서리)
             val drawable = GradientDrawable()
             drawable.shape = GradientDrawable.RECTANGLE
             drawable.setColor(rankColor)
             drawable.cornerRadius = dpToPx(context, 10).toFloat()
 
-            // 기존 backgroundTintList 초기화 후 커스텀 drawable 적용
             binding.graphBarView.backgroundTintList = null
             binding.graphBarView.background = drawable
 
-            // 랭크(원형) 배경 및 글자색 적용
             binding.graphRankTv.background.setTint(rankColor)
             binding.graphRankTv.setTextColor(textColor)
 
-            // 점수 텍스트 색상 (기본 흰색/회색 처리, 필요시 수정)
             binding.graphScoreTv.setTextColor(ContextCompat.getColor(context, R.color.white))
         }
     }
 
-    // [복사됨] 랭크별 색상 정의
-    private fun getRankColor(context: Context, position: Int): Int {
-        return when (position) {
-            0 -> ContextCompat.getColor(context, R.color.brand_100)
-            1 -> ContextCompat.getColor(context, R.color.brand_400)
-            2 -> ContextCompat.getColor(context, R.color.brand_700)
-            3 -> ContextCompat.getColor(context, R.color.brand_950)
-            4 -> ContextCompat.getColor(context, R.color.white)
-            5 -> ContextCompat.getColor(context, R.color.gray_400)
-            6 -> ContextCompat.getColor(context, R.color.gray_700)
+    // [기존 코드 유지] 랭크별 색상
+    private fun getRankColor(context: Context, rankIndex: Int): Int {
+        return when (rankIndex) {
+            0 -> ContextCompat.getColor(context, R.color.brand_100) // A
+            1 -> ContextCompat.getColor(context, R.color.brand_400) // B
+            2 -> ContextCompat.getColor(context, R.color.brand_700) // C
+            3 -> ContextCompat.getColor(context, R.color.brand_950) // D
+            4 -> ContextCompat.getColor(context, R.color.white)     // E
+            5 -> ContextCompat.getColor(context, R.color.gray_400)  // F
+            6 -> ContextCompat.getColor(context, R.color.gray_700)  // G
+            else -> ContextCompat.getColor(context, R.color.gray_200)
+        }
+    }
+
+    // [기존 코드 유지] 랭크별 글자 색상
+    private fun getRankTextColor(context: Context, rankIndex: Int): Int {
+        return when (rankIndex) {
+            0 -> ContextCompat.getColor(context, R.color.brand_800) // A일 때
+            4 -> ContextCompat.getColor(context, R.color.black)     // E(White)일 때
             else -> ContextCompat.getColor(context, R.color.white)
         }
     }
 
-    // [복사됨] 랭크별 글자 색상 (배경이 밝으면 검은색, 어두우면 흰색)
-    private fun getRankTextColor(context: Context, position: Int): Int {
-        return when (position) {
-            0 -> ContextCompat.getColor(context, R.color.brand_800)
-            4 -> ContextCompat.getColor(context, R.color.black)
-            else -> ContextCompat.getColor(context, R.color.white)
-        }
-    }
-
-    // [복사됨] dp -> px 변환
+    // [기존 코드 유지] dp 변환
     private fun dpToPx(context: Context, dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
@@ -94,7 +94,7 @@ class LightGraphAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(items[position], position)
+        holder.bind(items[position])
     }
 
     override fun getItemCount(): Int = items.size

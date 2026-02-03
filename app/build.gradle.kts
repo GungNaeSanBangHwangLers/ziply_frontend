@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,15 +55,21 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     implementation("me.relex:circleindicator:2.1.6")
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("androidx.security:security-crypto:1.0.0")
 
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
-    implementation(("com.google.android.material:material:1.13.0"))
     implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(("com.google.android.material:material:1.13.0"))
+
 }

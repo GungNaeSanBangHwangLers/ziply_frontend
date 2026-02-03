@@ -1,25 +1,31 @@
 package com.keder.zply
 
-import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.keder.zply.databinding.ActivityBeforeExploreBinding
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class BeforeExploreActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBeforeExploreBinding
-    private val gson = Gson()
+
+    private lateinit var mainListAdapter: BeforeExploreAdapter
+    private lateinit var lengthAdapter: LengthRankAdapter
     private lateinit var graphAdapter: GraphAdapter
+
+    private var currentCardId: String = ""
     private var isDayMode = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,98 +33,44 @@ class BeforeExploreActivity : AppCompatActivity() {
         binding = ActivityBeforeExploreBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 1. 데이터 로드 (메인에서 받은 인덱스 or 방금 추가된 마지막 데이터)
-        val sessionIndex = intent.getIntExtra("SESSION_INDEX", -1)
+        currentCardId = intent.getStringExtra("CARD_ID") ?: ""
 
-        // 데이터를 불러와서 화면을 세팅합니다.
-        loadAndSetupSession(sessionIndex)
+        // [로그] 1. 액티비티 진입 및 ID 확인
+        Log.d("API_DEBUG", "========== [BeforeExploreActivity] 시작 ==========")
+        Log.d("API_DEBUG", "전달받은 CardID: '$currentCardId'")
 
-        // 뒤로가기
-        binding.beforeBackIv.setOnClickListener {
+        if (currentCardId.isEmpty()) {
+            showCustomToast("전체 내용을 입력해주세요")
+            Log.e("API_DEBUG", "오류: CardID가 없음 -> 종료")
             finish()
-        }
-
-        setupDayNightButtons()
-    }
-
-    // [핵심 변경] 저장된 모든 세션을 불러와서, 특정 인덱스의 데이터를 화면에 뿌려줍니다.
-    private fun loadAndSetupSession(index: Int) {
-        val sharedPref = getSharedPreferences("MainStorage", Context.MODE_PRIVATE)
-        val jsonString = sharedPref.getString("KEY_ALL_SESSIONS", null)
-
-        if (jsonString == null) {
-            // 데이터가 아예 없는 경우 예외처리
             return
         }
 
-        val type = object : TypeToken<List<ExplorationSession>>() {}.type
-        val sessions: List<ExplorationSession> = gson.fromJson(jsonString, type)
-
-        if (sessions.isEmpty()) return
-
-        // index가 -1이면(방금 추가해서 넘어옴) 리스트의 마지막(최신) 데이터를 사용
-        // index가 있으면 그 데이터를 사용
-        val targetSession = if (index != -1 && index < sessions.size) {
-            sessions[index]
-        } else {
-            sessions.last()
-        }
-
-        // --- 데이터가 준비되었으니 화면에 반영 ---
-
-        // 1. 내 주소(회사) 설정
-        binding.beforeMyAddressTv.text = targetSession.companyAddress
-
-        // 2. 스케줄 리스트 가져오기 및 시간순 정렬
-        val scheduleList = targetSession.scheduleList.sortedBy { it.time }.toMutableList()
-
-        // 3. (임시) 목 데이터 점수 생성
-        // -> 실제 앱에서는 저장할 때 점수가 이미 있어야 하지만, 요청하신 로직 유지를 위해 여기서 랜덤 부여
-        scheduleList.forEach {
-            if (it.dayScore == 0) { // 점수가 없을 때만 랜덤 생성 (덮어쓰기 방지)
-                it.dayScore = (40..95).random()
-                it.nightScore = (30..80).random()
-                it.dayDesc = "이 점수는 버스 운행횟수(20회), 인근 도로 트래픽, 학교(2곳), 지상 지하철역(1곳), 상권 밀도를 함께 반영해 계산됐어요."
-                it.nightDesc = "이 점수는 버스 운행횟수(11회), 인근 도로 트래픽, 학교(2곳), 지상 지하철역(1곳), 상권 밀도를 함께 반영해 계산됐어요."
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                goToMainActivity()
             }
-        }
+        })
 
-        // 4. 상단 탐색 리스트 설정
-        setupExploreList(scheduleList)
-
-        // 5. 하단 직주거리 랭크 리스트 설정
-        setupLengthRankList(scheduleList)
-
-        // 6. "가장 짧은 곳" 텍스트 업데이트
-        updateShortestRankText(scheduleList)
-
-        // 7. 소음 요약 텍스트 업데이트
-        updateNoiseSummaryText(scheduleList)
-
-        // 8. 그래프 설정
-        setupGraph(scheduleList)
+        setupListeners()
+        loadAllData()
     }
 
-    private fun setupGraph(list : List<ScheduleItem>){
-        // list.size 등 불필요한 변수 제거
-        binding.beforeGraphRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-
-        graphAdapter = GraphAdapter(list) { description ->
-            if (description.isEmpty()) {
-                binding.graphDetailTv.visibility = View.GONE
-            } else {
-                binding.graphDetailTv.visibility = View.VISIBLE
-                binding.graphDetailTv.text = description
-            }
-        }
-        binding.beforeGraphRv.adapter = graphAdapter
+    private fun goToMainActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
-    private fun setupDayNightButtons() {
-        val selectedBg = ContextCompat.getDrawable(this, R.drawable.blue_bg6)
-        val unselectedBg = ContextCompat.getDrawable(this, R.drawable.gray_bg6)
-        val whiteColor = ContextCompat.getColor(this, R.color.white)
-        val grayColor = ContextCompat.getColor(this, R.color.gray_500)
+    private fun setupListeners() {
+        binding.beforeBackIv.setOnClickListener { goToMainActivity() }
+
+        val context = this
+        val selectedBg = ContextCompat.getDrawable(context, R.drawable.blue_bg6)
+        val unselectedBg = ContextCompat.getDrawable(context, R.drawable.gray_bg6)
+        val whiteColor = ContextCompat.getColor(context, R.color.white)
+        val grayColor = ContextCompat.getColor(context, R.color.gray_500)
 
         binding.beforeDayBtn.setOnClickListener {
             if (!isDayMode) {
@@ -127,10 +79,7 @@ class BeforeExploreActivity : AppCompatActivity() {
                 binding.beforeDayBtn.setTextColor(whiteColor)
                 binding.beforeNightBtn.background = unselectedBg
                 binding.beforeNightBtn.setTextColor(grayColor)
-
-                // graphAdapter 초기화 전에 클릭될 수 있으므로 null 체크 혹은 lateinit 보장 필요
-                // loadAndSetupSession이 먼저 호출되므로 괜찮음
-                graphAdapter.setMode(true)
+                if (::graphAdapter.isInitialized) graphAdapter.setMode(true)
                 binding.graphDetailTv.visibility = View.GONE
             }
         }
@@ -142,72 +91,171 @@ class BeforeExploreActivity : AppCompatActivity() {
                 binding.beforeNightBtn.setTextColor(whiteColor)
                 binding.beforeDayBtn.background = unselectedBg
                 binding.beforeDayBtn.setTextColor(grayColor)
-
-                graphAdapter.setMode(false)
+                if (::graphAdapter.isInitialized) graphAdapter.setMode(false)
                 binding.graphDetailTv.visibility = View.GONE
             }
         }
     }
 
-    private fun updateNoiseSummaryText(list: List<ScheduleItem>) {
-        if (list.isEmpty()) return
+    private fun loadAllData() {
+        lifecycleScope.launch {
+            binding.loadingLayout.visibility = View.VISIBLE
+            var retryCount = 0
+            val maxRetries = 5
+            var isSuccess = false
 
-        val minDayItem = list.minByOrNull { it.dayScore }
-        val minDayRank = if (minDayItem != null) ('A'.code + list.indexOf(minDayItem)).toChar() else '?'
+            while (retryCount < maxRetries) {
+                try {
+                    Log.d("API_DEBUG", "--- 데이터 로딩 시도: ${retryCount + 1}/$maxRetries ---")
+                    val service = RetrofitClient.getInstance(this@BeforeExploreActivity)
 
-        val minNightItem = list.minByOrNull { it.nightScore }
-        val minNightRank = if (minNightItem != null) ('A'.code + list.indexOf(minNightItem)).toChar() else '?'
+                    // API 호출 (4개)
+                    val houseDeferred = async { service.getCardHouseList(currentCardId) }
+                    val scoreDeferred = async { service.getAnalysisScore(currentCardId) }
+                    val distanceDeferred = async { service.getAnalysisDistance(currentCardId) }
+                    val addressDeferred = async {service.getCardAddresses(currentCardId)}
 
-        val text = "낮에는 $minDayRank, 밤에는 $minNightRank 가 \n소음이 가장 낮아요."
-        val spannable = SpannableString(text)
-        val blueColor = ContextCompat.getColor(this, R.color.brand_100)
+                    val houseRes = houseDeferred.await()
+                    val scoreRes = scoreDeferred.await()
+                    val distanceRes = distanceDeferred.await()
+                    val addressRes = addressDeferred.await()
 
-        val dayIndex = text.indexOf(minDayRank.toString())
-        if (dayIndex != -1) {
-            spannable.setSpan(ForegroundColorSpan(blueColor), dayIndex, dayIndex + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
+                    // 필수 데이터 확인 (집 목록, 거리 정보)
+                    val isHouseReady = houseRes.isSuccessful && !houseRes.body().isNullOrEmpty()
+                    var isDistanceReady = false
+                    if (distanceRes.isSuccessful && distanceRes.body() != null) {
+                        val body = distanceRes.body()!!
+                        if (body.basePoints.isNotEmpty()) {
+                            isDistanceReady = true
+                        }
+                    }
 
-        val nightIndex = text.lastIndexOf(minNightRank.toString())
-        if (nightIndex != -1) {
-            spannable.setSpan(ForegroundColorSpan(blueColor), nightIndex, nightIndex + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
+                    if (isHouseReady && isDistanceReady) {
+                        Log.d("API_DEBUG", ">> 모든 필수 데이터 준비 완료! UI 렌더링 시작")
 
-        binding.beforeNoiseTv.text = spannable
-    }
+                        val houses = houseRes.body()!!
+                        val distBody = distanceRes.body()!!
 
-    // [삭제됨] setupMyAddress(), getScheduleList() -> loadAndSetupSession()으로 통합됨
+                        // --- 1. 직장 주소 처리 ---
+                        var companyAddr = "직장 정보 없음"
+                        if (addressRes.isSuccessful && addressRes.body() != null) {
+                            val addrList = addressRes.body()!!
+                            if (addrList.isNotEmpty()) {
+                                companyAddr = addrList[0].address
+                            }
+                        }
 
-    private fun setupExploreList(list: List<ScheduleItem>) {
-        binding.beforeExploreListRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        binding.beforeExploreListRv.adapter = BeforeExploreAdapter(list)
-    }
+                        // ★ [수정] 여기가 빠져 있었습니다! UI에 반영
+                        binding.beforeMyAddressTv.text = companyAddr
+                        Log.d("API_DEBUG", "직장 주소 UI 반영 완료: $companyAddr")
 
-    private fun setupLengthRankList(list: List<ScheduleItem>) {
-        binding.beforeLengthRankRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        binding.beforeLengthRankRv.adapter = LengthRankAdapter(list)
-    }
+                        // --- 2. 거리 데이터 매핑 ---
+                        val distanceMap = mutableMapOf<Long, Pair<Int, Double>>()
+                        distBody.basePoints[0].results.forEach {
+                            distanceMap[it.houseId] = Pair(it.walkingTimeMin, it.walkingDistanceKm)
+                        }
 
-    private fun updateShortestRankText(list: List<ScheduleItem>) {
-        if (list.isNotEmpty()) {
-            val shortestAddress = list[0].address // A랭크(0번)가 가장 짧다고 가정
-            val fullText = "직주거리는 $shortestAddress 이(가) \n가장 짧아요"
-            val spannable = SpannableString(fullText)
-            val startIndex = fullText.indexOf(shortestAddress)
+                        // --- 3. 점수 데이터 매핑 ---
+                        val scoreMap = if (scoreRes.isSuccessful && scoreRes.body() != null) {
+                            scoreRes.body()!!.associateBy { it.houseId }
+                        } else {
+                            emptyMap()
+                        }
 
-            if (startIndex != -1) {
-                val endIndex = startIndex + shortestAddress.length
-                val blueColor = ContextCompat.getColor(this, R.color.brand_500)
+                        // --- 4. 리스트 합치기 및 어댑터 연결 ---
+                        val sortedHouses = houses.sortedBy { it.visitTime }
+                        val uiList = sortedHouses.mapIndexed { index, house ->
+                            val dist = distanceMap[house.houseId]
+                            val score = scoreMap[house.houseId]
 
-                spannable.setSpan(
-                    ForegroundColorSpan(blueColor),
-                    startIndex,
-                    endIndex,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
+                            ScheduleItem(
+                                houseId = house.houseId,
+                                address = house.address,
+                                time = house.visitTime,
+                                rankLabel = ('A'.code + index).toChar().toString(),
+                                dayScore = score?.dayScore ?: 0,
+                                nightScore = score?.nightScore ?: 0,
+                                dayDesc = score?.message ?: "",
+                                nightDesc = score?.message ?: "",
+                                walkingTimeMin = dist?.first ?: 0,
+                                walkingDistanceKm = dist?.second ?: 0.0
+                            )
+                        }
+
+                        setupRecyclerViews(uiList)
+                        updateSummaries(uiList)
+
+                        isSuccess = true
+                        break
+                    } else {
+                        Log.w("API_DEBUG", "데이터 불완전 -> 0.5초 대기 후 재시도")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("API_DEBUG", "에러 발생: ${e.message}", e)
+                }
+
+                retryCount++
+                delay(500)
             }
+            binding.loadingLayout.visibility = View.GONE
+
+            if (!isSuccess) {
+                // 실패 처리 (토스트 등)
+            }
+        }
+    }
+    private fun setupRecyclerViews(list: List<ScheduleItem>) {
+        mainListAdapter = BeforeExploreAdapter(list)
+        binding.beforeExploreListRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.beforeExploreListRv.adapter = mainListAdapter
+
+        val sortedByDist = list.sortedBy { it.walkingTimeMin }
+        lengthAdapter = LengthRankAdapter(sortedByDist)
+        binding.beforeLengthRankRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.beforeLengthRankRv.adapter = lengthAdapter
+
+        graphAdapter = GraphAdapter(list) { desc ->
+            if (desc.isNotEmpty()) {
+                binding.graphDetailTv.visibility = View.VISIBLE
+                binding.graphDetailTv.text = desc
+            } else {
+                binding.graphDetailTv.visibility = View.GONE
+            }
+        }
+        binding.beforeGraphRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.beforeGraphRv.adapter = graphAdapter
+        graphAdapter.setMode(isDayMode)
+    }
+
+    private fun updateSummaries(list: List<ScheduleItem>) {
+        val brandColor = ContextCompat.getColor(this, R.color.brand_700)
+
+        // 거리 요약
+        val bestDistItem = list.filter { it.walkingTimeMin > 0 }.minByOrNull { it.walkingTimeMin }
+        if (bestDistItem != null) {
+            val rank = bestDistItem.rankLabel
+            val text = "직주거리는 $rank 가 \n가장 짧아요"
+            val spannable = SpannableString(text)
+            val idx = text.indexOf(rank)
+            if (idx != -1) spannable.setSpan(ForegroundColorSpan(brandColor), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             binding.beforeLengthRankTv.text = spannable
         } else {
-            binding.beforeLengthRankTv.text = "일정 정보가 없습니다."
+            binding.beforeLengthRankTv.text = "거리 정보가 없습니다."
         }
+
+        // 소음 요약
+        val bestDay = list.filter { it.dayScore > 0 }.minByOrNull { it.dayScore }
+        val bestNight = list.filter { it.nightScore > 0 }.minByOrNull { it.nightScore }
+
+        val dayRank = bestDay?.rankLabel ?: "-"
+        val nightRank = bestNight?.rankLabel ?: "-"
+        val noiseText = "낮에는 $dayRank, 밤에는 $nightRank 가 \n소음이 가장 낮아요."
+        val noiseSpan = SpannableString(noiseText)
+        val dayIdx = noiseText.indexOf(dayRank)
+        if (dayIdx != -1) noiseSpan.setSpan(ForegroundColorSpan(brandColor), dayIdx, dayIdx + dayRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val nightIdx = noiseText.lastIndexOf(nightRank)
+        if (nightIdx != -1) noiseSpan.setSpan(ForegroundColorSpan(brandColor), nightIdx, nightIdx + nightRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        binding.beforeNoiseTv.text = noiseSpan
     }
 }

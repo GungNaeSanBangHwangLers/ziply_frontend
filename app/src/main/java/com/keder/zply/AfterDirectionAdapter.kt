@@ -1,14 +1,13 @@
 package com.keder.zply
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.ItemAfterDirectionBinding
 
-// [중요] 클래스 밖, 파일 최상단에 정의
+// 데이터 클래스
 data class DirectionGroupItem(
     val direction: String,
     val ranks: List<Char>,
@@ -28,29 +27,31 @@ class AfterDirectionAdapter(
             binding.itemGoodDesTv.text = item.goodPoints
             binding.itemBadDesTv.text = item.badPoints
 
-            // 랭크 1
-            if (item.ranks.isNotEmpty()) {
-                binding.itemRankTv.visibility = View.VISIBLE
-                binding.itemRankTv.text = item.ranks[0].toString()
-                setRankStyle(binding.itemRankTv, item.ranks[0])
-            } else {
-                binding.itemRankTv.visibility = View.GONE
-            }
+            // ★ [핵심 수정] 기존 뷰 초기화 (재사용 문제 방지)
+            binding.rankContainerLl.removeAllViews()
 
-            // 랭크 2
-            if (item.ranks.size > 1) {
-                binding.itemRank2Tv.visibility = View.VISIBLE
-                binding.itemRank2Tv.text = item.ranks[1].toString()
-                setRankStyle(binding.itemRank2Tv, item.ranks[1])
-            } else {
-                binding.itemRank2Tv.visibility = View.GONE
+            // ★ 리스트에 있는 만큼 반복해서 뷰 생성
+            val context = binding.root.context
+            val inflater = LayoutInflater.from(context)
+
+            item.ranks.forEach { rankChar ->
+                // 1. item_rank_badge.xml을 inflate(생성)
+                val badgeView = inflater.inflate(R.layout.item_direction_badge, binding.rankContainerLl, false) as TextView
+
+                // 2. 텍스트 설정
+                badgeView.text = rankChar.toString()
+
+                // 3. 색상 설정 (기존 로직 활용)
+                setRankStyle(badgeView, rankChar)
+
+                // 4. 컨테이너에 추가
+                binding.rankContainerLl.addView(badgeView)
             }
         }
     }
 
     private fun setRankStyle(textView: TextView, rank: Char) {
         val context = textView.context
-        // (색상 리소스가 프로젝트에 존재하는지 확인 필요)
         val brand100 = ContextCompat.getColor(context, R.color.brand_100)
         val brand800 = ContextCompat.getColor(context, R.color.brand_800)
         val brand400 = ContextCompat.getColor(context, R.color.brand_400)
