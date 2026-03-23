@@ -1,107 +1,138 @@
 package com.keder.zply
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.keder.zply.databinding.ItemIngCardBinding
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class IngCardAdapter(
-    private val items: List<ScheduleItem>,
-    private val onMeasureClick : (Int) -> Unit,
-    // ★ [추가] 방향 정보 클릭 콜백 (HouseId 전달)
-    private val onDirectionInfoClick: (Long) -> Unit
+    private val items: MutableList<ScheduleItem>,
+    private val onLightClick: (Int, ScheduleItem) -> Unit,
+    private val onDirectionClick: (Int, ScheduleItem) -> Unit,
+    private val onPhotoClick: (Int, ScheduleItem) -> Unit
 ) : RecyclerView.Adapter<IngCardAdapter.ViewHolder>() {
 
     inner class ViewHolder(val binding: ItemIngCardBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ScheduleItem, position: Int) {
             val context = binding.root.context
 
-            // ... (기존 코드: 랭크, 주소, 날짜 등 설정) ...
-            val rankString = item.rankLabel
-            val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
-            binding.ingCardRankTv.text = rankString
-            setRankStyle(binding.ingCardRankTv, rankChar)
-            binding.ingCardAddressTv.text = item.address
-            val formattedDate = formatDate(item.time)
-            binding.ingCardDateTv.text = "${formattedDate} 탐색 예정"
+            // 1. 라벨 색상 적용 (A~G)
+            binding.ingCardRankTv.text = item.rankLabel
+            setRankStyle(binding.ingCardRankTv, item.rankLabel)
 
-            // ... (기존 코드: 이미지 리사이클러뷰) ...
+            binding.ingCardAddressTv.text = item.address
+            binding.ingCardDateTv.text = "${item.time} 탐색 예정"
+
+            val brand600 = ContextCompat.getColor(context, R.color.brand_600)
+            val gray400 = ContextCompat.getColor(context, R.color.gray_400)
+            val gray300 = ContextCompat.getColor(context, R.color.gray_300)
+            val white = ContextCompat.getColor(context, R.color.white)
+
+            // ==========================================================
+            // 2. 방향 측정 UI 상태 전환 (패딩 및 배경 꼬임 방지)
+            // ==========================================================
+            val padH = (16 * context.resources.displayMetrics.density).toInt()
+            val padV = (7 * context.resources.displayMetrics.density).toInt()
+
+            if (item.measuredRoomCount > 0) {
+                binding.ingCardDirectionLl.setBackgroundResource(R.drawable.ing_complete_badge)
+                binding.ingCardDirectionLl.setPadding(padH, padV, padH, padV)
+
+                binding.ingCardDirectionIconIv.visibility = View.VISIBLE
+                binding.ingCardDirectionBadgeTv.visibility = View.GONE
+
+                binding.ingCardDirectionValueTv.visibility = View.VISIBLE
+                binding.ingCardDirectionValueTv.text = "총 ${item.measuredRoomCount}개 방"
+
+                binding.ingCardDirectionTv.text = "다시 측정"
+                binding.ingCardDirectionTv.background = null
+                binding.ingCardDirectionTv.setTextColor(gray300)
+                binding.ingCardDirectionTv.setPadding(0, 0, 0, 0)
+            } else {
+                binding.ingCardDirectionLl.setBackgroundResource(R.drawable.black_badge)
+                binding.ingCardDirectionLl.setPadding(padH, padV, padH, padV)
+
+                binding.ingCardDirectionIconIv.visibility = View.GONE
+                binding.ingCardDirectionBadgeTv.visibility = View.VISIBLE
+                binding.ingCardDirectionBadgeTv.text = "방향 측정 미완료"
+
+                binding.ingCardDirectionValueTv.visibility = View.GONE
+
+                binding.ingCardDirectionTv.text = "측정하기"
+                binding.ingCardDirectionTv.setBackgroundResource(R.drawable.good_badge)
+                binding.ingCardDirectionTv.backgroundTintList = ColorStateList.valueOf(brand600)
+                binding.ingCardDirectionTv.setTextColor(white)
+
+                val btnPadH = (28 * context.resources.displayMetrics.density).toInt()
+                val btnPadV = (8 * context.resources.displayMetrics.density).toInt()
+                binding.ingCardDirectionTv.setPadding(btnPadH, btnPadV, btnPadH, btnPadV)
+            }
+
+            // ==========================================================
+            // 3. 채광 측정 UI 상태 전환
+            // ==========================================================
+            if (item.measuredLightLux >= 0f) {
+                binding.ingCardLightLl.setBackgroundResource(R.drawable.ing_complete_badge)
+                binding.ingCardLightLl.setPadding(padH, padV, padH, padV)
+
+                binding.ingCardLightIconIv.visibility = View.VISIBLE
+                binding.ingCardLightBadgeTv.visibility = View.GONE
+
+                binding.ingCardLightValueTv.visibility = View.VISIBLE
+                binding.ingCardLightValueTv.text = "${item.measuredLightLux.toInt()} lux"
+
+                binding.ingCardLightTv.text = "다시 측정"
+                binding.ingCardLightTv.background = null
+                binding.ingCardLightTv.setTextColor(gray300)
+                binding.ingCardLightTv.setPadding(0, 0, 0, 0)
+            } else {
+                binding.ingCardLightLl.setBackgroundResource(R.drawable.black_badge)
+                binding.ingCardLightLl.setPadding(padH, padV, padH, padV)
+
+                binding.ingCardLightIconIv.visibility = View.GONE
+                binding.ingCardLightBadgeTv.visibility = View.VISIBLE
+                binding.ingCardLightBadgeTv.text = "채광 측정 미완료"
+
+                binding.ingCardLightValueTv.visibility = View.GONE
+
+                binding.ingCardLightTv.text = "측정하기"
+                binding.ingCardLightTv.setBackgroundResource(R.drawable.good_badge)
+                binding.ingCardLightTv.backgroundTintList = ColorStateList.valueOf(brand600)
+                binding.ingCardLightTv.setTextColor(white)
+
+                val btnPadH = (28 * context.resources.displayMetrics.density).toInt()
+                val btnPadV = (8 * context.resources.displayMetrics.density).toInt()
+                binding.ingCardLightTv.setPadding(btnPadH, btnPadV, btnPadH, btnPadV)
+            }
+
+            // ==========================================================
+            // 4. 사진 렌더링 (Glide 적용 완료)
+            // ==========================================================
             if (item.imageList.isNotEmpty()) {
                 binding.ingCardImgRv.visibility = View.VISIBLE
-                val imgAdapter = IngImageAdapter(item.imageList)
-                binding.ingCardImgRv.adapter = imgAdapter
                 binding.ingCardImgRv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+                binding.ingCardImgRv.adapter = InternalImageAdapter(item.imageList)
             } else {
                 binding.ingCardImgRv.visibility = View.GONE
             }
 
-            // ... (기존 코드: 측정 상태 확인 및 배지 설정) ...
-            val isMeasured = item.isMeasured || item.measuredAzimuths.isNotEmpty()
-            // (색상 변수들... 생략)
-            val brand200 = ContextCompat.getColor(context, R.color.brand_200)
-            val brand700 = ContextCompat.getColor(context, R.color.brand_800)
-            val gray400 = ContextCompat.getColor(context, R.color.gray_400)
-            val gray600 = ContextCompat.getColor(context, R.color.gray_600)
-
-            if (isMeasured) {
-                val directionText = item.measuredAzimuths.joinToString(", ") { "${it}°" }
-                binding.ingCardDirectionTv.text = directionText
-                val lightText = "${String.format("%.1f", item.measuredLight)} lx"
-                binding.ingCardLightTv.text = lightText
-
-                binding.ingCardDirectionBadgeTv.backgroundTintList = ColorStateList.valueOf(brand200)
-                binding.ingCardDirectionBadgeTv.setTextColor(brand700)
-                binding.ingCardDirectionBadgeTv.text = "측정 완료"
-
-                binding.ingCardLightBadgeTv.backgroundTintList = ColorStateList.valueOf(brand200)
-                binding.ingCardLightBadgeTv.setTextColor(brand700)
-                binding.ingCardLightBadgeTv.text = "측정 완료"
-                binding.ingCardBtn.text = "다시 측정하기"
-            } else {
-                binding.ingCardDirectionBadgeTv.backgroundTintList = ColorStateList.valueOf(gray400)
-                binding.ingCardDirectionBadgeTv.setTextColor(gray600)
-                binding.ingCardDirectionBadgeTv.text = "방향 측정 미완료"
-
-                binding.ingCardLightBadgeTv.backgroundTintList = ColorStateList.valueOf(gray400)
-                binding.ingCardLightBadgeTv.setTextColor(gray600)
-                binding.ingCardLightBadgeTv.text = "채광 측정 미완료"
-            }
-
-            // [기존] 측정 버튼 클릭
-            binding.ingCardBtn.setOnClickListener {
-                onMeasureClick(position)
-            }
-
-            // ★ [추가] 방향 정보 아이콘(ing_item_direction_iv) 클릭 리스너
-            // XML에 해당 ID(ing_item_direction_iv)가 있다고 가정합니다.
-            // 만약 ID가 다르다면 binding.아이디 로 변경해주세요.
-            binding.ingItemDirectionIv.setOnClickListener {
-                onDirectionInfoClick(item.houseId)
-            }
+            binding.ingCardDirectionLl.setOnClickListener { onDirectionClick(position, item) }
+            binding.ingCardDirectionTv.setOnClickListener { onDirectionClick(position, item) }
+            binding.ingCardLightLl.setOnClickListener { onLightClick(position, item) }
+            binding.ingCardLightTv.setOnClickListener { onLightClick(position, item) }
+            binding.ingImageBtn.setOnClickListener { onPhotoClick(position, item) }
         }
     }
 
-    // ... (formatDate, setRankStyle, onCreateViewHolder 등 기존 함수 유지) ...
-    private fun formatDate(inputDate: String): String {
-        // 기존 코드 유지
-        return try {
-            val inputFormatStr = if (inputDate.contains("T")) "yyyy-MM-dd'T'HH:mm:ss" else "yyyy-MM-dd HH:mm:ss"
-            val inputFormat = SimpleDateFormat(inputFormatStr, Locale.KOREA)
-            val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
-            val date = inputFormat.parse(inputDate)
-            if (date != null) outputFormat.format(date) else inputDate
-        } catch (e: Exception) { inputDate }
-    }
-
-    private fun setRankStyle(textView: TextView, rank: Char) {
-        // 기존 코드 유지
+    private fun setRankStyle(textView: TextView, rank: String) {
         val context = textView.context
         val brand100 = ContextCompat.getColor(context, R.color.brand_100)
         val brand800 = ContextCompat.getColor(context, R.color.brand_800)
@@ -114,15 +145,16 @@ class IngCardAdapter(
         val gray700 = ContextCompat.getColor(context, R.color.gray_700)
         val gray200 = ContextCompat.getColor(context, R.color.gray_200)
 
-        when (rank) {
-            'A' -> { textView.background.setTint(brand100); textView.setTextColor(brand800) }
-            'B' -> { textView.background.setTint(brand400); textView.setTextColor(white) }
-            'C' -> { textView.background.setTint(brand700); textView.setTextColor(white) }
-            'D' -> { textView.background.setTint(brand950); textView.setTextColor(white) }
-            'E' -> { textView.background.setTint(white); textView.setTextColor(black) }
-            'F' -> { textView.background.setTint(gray400); textView.setTextColor(white) }
-            'G' -> { textView.background.setTint(gray700); textView.setTextColor(white) }
-            else -> { textView.background.setTint(gray200); textView.setTextColor(black) }
+        val rankChar = if (rank.isNotEmpty()) rank[0] else '?'
+        when (rankChar) {
+            'A' -> { textView.backgroundTintList = ColorStateList.valueOf(brand100); textView.setTextColor(brand800) }
+            'B' -> { textView.backgroundTintList = ColorStateList.valueOf(brand400); textView.setTextColor(white) }
+            'C' -> { textView.backgroundTintList = ColorStateList.valueOf(brand700); textView.setTextColor(white) }
+            'D' -> { textView.backgroundTintList = ColorStateList.valueOf(brand950); textView.setTextColor(white) }
+            'E' -> { textView.backgroundTintList = ColorStateList.valueOf(white); textView.setTextColor(black) }
+            'F' -> { textView.backgroundTintList = ColorStateList.valueOf(gray400); textView.setTextColor(white) }
+            'G' -> { textView.backgroundTintList = ColorStateList.valueOf(gray700); textView.setTextColor(white) }
+            else -> { textView.backgroundTintList = ColorStateList.valueOf(gray200); textView.setTextColor(black) }
         }
     }
 
@@ -136,4 +168,32 @@ class IngCardAdapter(
     }
 
     override fun getItemCount(): Int = items.size
+
+    // ★ 수정됨: 내부 사진 어댑터에 Glide 적용
+    class InternalImageAdapter(private val imagePaths: List<String>) : RecyclerView.Adapter<InternalImageAdapter.ImageViewHolder>() {
+        inner class ImageViewHolder(val imageView: ImageView) : RecyclerView.ViewHolder(imageView)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
+            val dpToPx = { dp: Int -> (dp * parent.context.resources.displayMetrics.density).toInt() }
+            val imageView = ImageView(parent.context).apply {
+                layoutParams = ViewGroup.MarginLayoutParams(dpToPx(60), dpToPx(60)).apply { marginEnd = dpToPx(8) }
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                setBackgroundColor(Color.parseColor("#E0E0E0"))
+                clipToOutline = true
+            }
+            return ImageViewHolder(imageView)
+        }
+
+        override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
+            val imagePath = imagePaths[position]
+
+            // ★ 핵심: 서버 URL이든 로컬 경로이든 Glide가 알아서 부드럽게 그려줍니다.
+            Glide.with(holder.imageView.context)
+                .load(imagePath)
+                .centerCrop()
+                .into(holder.imageView)
+        }
+
+        override fun getItemCount(): Int = imagePaths.size
+    }
 }

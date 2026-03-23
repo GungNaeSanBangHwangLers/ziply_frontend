@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+       android:layout_marginTop="40dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="60dp">
+
+        <TextView
+            android:id="@+id/after_safety_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="안전 점수는 {Char}가 \n가장 높아요."
+            android:textAppearance="@style/body1_Semibold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/after_safety_des_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="학교에서 집 가는 길의 치안 인프라와 관련 뉴스를 기반으로\n알려드릴게요. 점수가 높을수록 좋아요."
+            android:textAppearance="@style/caption1_Median"
+            android:layout_marginTop="10dp"
+            app:layout_constraintStart_toStartOf="@id/after_safety_tv"
+            app:layout_constraintTop_toBottomOf="@id/after_safety_tv"/>
+
+<!--        <LinearLayout-->
+<!--            android:id="@+id/tab_container"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="34dp"-->
+<!--            android:orientation="horizontal"-->
+<!--            android:layout_marginTop="16dp"-->
+<!--            android:background="@drawable/gray_bg6"-->
+<!--            app:layout_constraintStart_toStartOf="@id/after_safety_des_tv"-->
+<!--            app:layout_constraintTop_toBottomOf="@id/after_safety_des_tv">-->
+
+<!--            <TextView-->
+<!--                android:id="@+id/after_infra_btn"-->
+<!--                android:layout_width="90dp"-->
+<!--                android:layout_height="match_parent"-->
+<!--                android:background="@drawable/blue_bg6"-->
+<!--                android:gravity="center"-->
+<!--                android:text="안전 인프라"-->
+<!--                android:textColor="@color/white"-->
+<!--                android:textStyle="bold"/>-->
+
+<!--            <TextView-->
+<!--                android:id="@+id/after_security_btn"-->
+<!--                android:layout_width="90dp"-->
+<!--                android:layout_height="match_parent"-->
+<!--                android:background="@android:color/transparent"-->
+<!--                android:gravity="center"-->
+<!--                android:text="치안 안전도"-->
+<!--                android:textColor="@color/gray_500"-->
+<!--                android:textStyle="bold"/>-->
+<!--        </LinearLayout>-->
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/graph_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="30dp"
+            android:background="@drawable/gray_bg16"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/after_safety_des_tv">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/before_graph_rv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="20dp"
+                android:overScrollMode="never"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:layout_constrainedWidth="true"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:listitem="@layout/item_graph_bar"/>
+
+            <TextView
+                android:id="@+id/graph_detail_tv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="16dp"
+                android:padding="12dp"
+                android:background="@drawable/gray_bg"
+                android:text="그래프를 눌러 상세 정보를 확인하세요."
+                android:textColor="@color/gray_300"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:visibility="visible"
+                app:layout_constraintTop_toBottomOf="@id/before_graph_rv"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

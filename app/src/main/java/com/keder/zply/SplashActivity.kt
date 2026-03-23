@@ -1,9 +1,11 @@
 package com.keder.zply
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 
 class SplashActivity : AppCompatActivity() {
@@ -12,6 +14,9 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         // 스플래시 화면 레이아웃 (로고 등)이 있다면 설정
         // setContentView(R.layout.activity_splash)
+
+        val draftPref = getSharedPreferences("schedule_draft_pref", Context.MODE_PRIVATE) // DRAFT_PREF 이름 일치시켜야 함
+        draftPref.edit().clear().apply()
 
         // 2초 정도 대기 후 로그인 상태 체크 (UX적으로 로고를 보여주기 위함)
         Handler(Looper.getMainLooper()).postDelayed({
@@ -23,9 +28,12 @@ class SplashActivity : AppCompatActivity() {
         val tokenManager = TokenManager(this)
         val accessToken = tokenManager.getAccessToken()
 
+        Log.e("DEBUG_TOKEN", "현재 저장된 토큰 값: [$accessToken]")
+
         if (!accessToken.isNullOrEmpty()) {
             // 1. 토큰이 있다 -> 메인 화면으로 이동
-            val intent = Intent(this, MainActivity::class.java)
+//            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
         } else {
             // 2. 토큰이 없다 -> 로그인 화면으로 이동

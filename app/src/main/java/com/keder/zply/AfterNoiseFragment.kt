@@ -1,5 +1,6 @@
 package com.keder.zply
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
@@ -10,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.keder.zply.databinding.FragmentAfterNoiseBinding
@@ -31,10 +33,7 @@ class AfterNoiseFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. API 데이터 로드 시작
         loadNoiseData()
-
-        // 2. 버튼 리스너 설정
         setupDayNightButtons()
     }
 
@@ -46,45 +45,42 @@ class AfterNoiseFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                // [API 호출] 소음 점수 가져오기
-                val response = RetrofitClient.getInstance(requireContext()).getAnalysisScore(cardId)
+                // ★ 수정됨: getAnalysisScore -> getAnalysisLife (이전에 썼던 정확한 소음 API)
+                val response = RetrofitClient.getInstance(requireContext()).getAnalysisLife(cardId)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val scoreList = response.body()!!
+                    val lifeList = response.body()!!
 
-                    // [데이터 매핑] API 응답 -> UI 모델(ScheduleItem) 변환
-                    val uiList = scoreList.map { score ->
+                    Log.d("API_AFTER_NOISE", "✅ [소음] 통신 성공! 갯수: ${lifeList.size}, 데이터: $lifeList")
+
+                    // ★ 수정됨: LifeResponse 형식에 맞춰서 매핑
+                    val uiList = lifeList.map { life ->
                         ScheduleItem(
-                            houseId = score.houseId,
-                            address = "", // 그래프에서는 주소 안 씀
-                            time = "",    // 그래프에서는 시간 안 씀
-
-                            // 점수 및 설명 매핑
-                            dayScore = score.dayScore,
-                            nightScore = score.nightScore,
-                            dayDesc = score.message,   // API 메시지를 설명으로 사용
-                            nightDesc = score.message, // 낮/밤 메시지가 같다면 동일하게 설정
-
-                            // [중요] 액티비티의 마스터 리스트와 동일한 랭크(A, B, C) 가져오기
-                            rankLabel = activity.getRankLabel(score.houseId)
+                            houseId = life.houseId,
+                            address = "",
+                            time = "",
+                            dayScore = life.dayScore,      // 낮 소음 점수
+                            nightScore = life.nightScore,  // 밤 소음 점수
+                            dayDesc = life.message ?: "",  // 생활/소음 코멘트
+                            nightDesc = life.message ?: "",
+                            rankLabel = activity.getRankLabel(life.houseId) // A, B, C...
                         )
-                    }.sortedBy { it.rankLabel } // A, B, C 순서대로 정렬
+                    }.sortedBy { it.rankLabel }
 
                     if (uiList.isNotEmpty()) {
                         setupGraph(uiList)
                         updateNoiseSummaryText(uiList)
                     } else {
-                        // 데이터 없을 때 처리 (옵션)
+                        Log.w("API_AFTER_NOISE", "⚠️ [소음] 데이터가 0개입니다.")
                     }
                 } else {
-                    Log.e("AfterNoise", "Load failed: ${response.code()}")
+                    Log.e("API_AFTER_NOISE", "❌ [소음] 통신 실패! 코드: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("AfterNoise", "Network error", e)
+                Log.e("API_AFTER_NOISE", "❌ [소음] 예외 발생: ${e.message}", e)
             }
         }
     }
-
     private fun setupGraph(list: List<ScheduleItem>) {
         binding.beforeGraphRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
@@ -97,25 +93,25 @@ class AfterNoiseFragment : Fragment() {
             }
         }
         binding.beforeGraphRv.adapter = graphAdapter
-
-        // 초기 모드 설정 (낮)
+        binding.beforeGraphRv.adapter = graphAdapter
         graphAdapter.setMode(isDayMode)
+
+        val favoriteViewModel = ViewModelProvider(requireActivity())[FavoriteViewModel::class.java]
+        favoriteViewModel.favoriteSet.observe(viewLifecycleOwner) { favorites ->
+            graphAdapter.updateFavorites(favorites) // 방향 탭은 adapter.updateFavorites(favorites)
+        }
     }
 
     private fun setupDayNightButtons() {
         val context = requireContext()
-        val selectedBg = ContextCompat.getDrawable(context, R.drawable.blue_bg6)
-        val unselectedBg = ContextCompat.getDrawable(context, R.drawable.gray_bg6)
-        val whiteColor = ContextCompat.getColor(context, R.color.white)
-        val grayColor = ContextCompat.getColor(context, R.color.gray_500)
+        val grayColor = ContextCompat.getColor(context, R.color.gray_900)
+        val blueColor = ContextCompat.getColor(context, R.color.brand_700)
 
-        binding.afterDayBtn.setOnClickListener {
+        binding.afterDayTv.setOnClickListener {
             if (!isDayMode) {
                 isDayMode = true
-                binding.afterDayBtn.background = selectedBg
-                binding.afterDayBtn.setTextColor(whiteColor)
-                binding.afterNightBtn.background = unselectedBg
-                binding.afterNightBtn.setTextColor(grayColor)
+                binding.afterDayTv.backgroundTintList = ColorStateList.valueOf(blueColor)
+                binding.afterNightTv.backgroundTintList = ColorStateList.valueOf(grayColor)
 
                 if (::graphAdapter.isInitialized) {
                     graphAdapter.setMode(true)
@@ -124,13 +120,11 @@ class AfterNoiseFragment : Fragment() {
             }
         }
 
-        binding.afterNightBtn.setOnClickListener {
+        binding.afterNightTv.setOnClickListener {
             if (isDayMode) {
                 isDayMode = false
-                binding.afterNightBtn.background = selectedBg
-                binding.afterNightBtn.setTextColor(whiteColor)
-                binding.afterDayBtn.background = unselectedBg
-                binding.afterDayBtn.setTextColor(grayColor)
+                binding.afterDayTv.backgroundTintList = ColorStateList.valueOf(grayColor)
+                binding.afterNightTv.backgroundTintList = ColorStateList.valueOf(blueColor)
 
                 if (::graphAdapter.isInitialized) {
                     graphAdapter.setMode(false)
@@ -143,11 +137,9 @@ class AfterNoiseFragment : Fragment() {
     private fun updateNoiseSummaryText(list: List<ScheduleItem>) {
         if (list.isEmpty()) return
 
-        // 소음 점수가 가장 낮은(좋은) 아이템 찾기
         val minDayItem = list.minByOrNull { it.dayScore }
         val minNightItem = list.minByOrNull { it.nightScore }
 
-        // 해당 아이템의 랭크 라벨(A, B, C...) 가져오기
         val minDayRank = minDayItem?.rankLabel ?: "-"
         val minNightRank = minNightItem?.rankLabel ?: "-"
 
@@ -155,13 +147,11 @@ class AfterNoiseFragment : Fragment() {
         val spannable = SpannableString(text)
         val blueColor = ContextCompat.getColor(requireContext(), R.color.brand_600)
 
-        // 랭크 텍스트 색상 변경
         val dayIndex = text.indexOf(minDayRank)
         if (dayIndex != -1) {
             spannable.setSpan(ForegroundColorSpan(blueColor), dayIndex, dayIndex + minDayRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
 
-        // 밤 랭크는 뒤에서부터 검색 (혹시 A, A 일 경우 대비)
         val nightIndex = text.lastIndexOf(minNightRank)
         if (nightIndex != -1) {
             spannable.setSpan(ForegroundColorSpan(blueColor), nightIndex, nightIndex + minNightRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)

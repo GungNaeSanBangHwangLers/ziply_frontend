@@ -6,20 +6,22 @@
     android:layout_height="wrap_content"
     android:background="@drawable/gray_bg"
     android:layout_marginEnd="10dp"
-    android:paddingBottom="20dp"> <TextView
-    android:id="@+id/explore_rank_tv"
-    android:layout_width="28dp"
-    android:layout_height="28dp"
-    android:background="@drawable/bg_rank_circle"
-    android:backgroundTint="@color/brand_100"
-    android:text="A"
-    android:gravity="center"
-    android:textColor="@color/brand_800"
-    android:textAppearance="@style/caption1_Semibold"
-    android:layout_marginStart="20dp"
-    android:layout_marginTop="30dp"
-    app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"/>
+    android:paddingBottom="20dp">
+
+    <TextView
+        android:id="@+id/explore_rank_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_100"
+        android:text="A"
+        android:gravity="center"
+        android:textColor="@color/brand_800"
+        android:textAppearance="@style/caption1_Semibold"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView
         android:id="@+id/explore_date_tv"
@@ -32,6 +34,15 @@
         android:textColor="@color/brand_100"
         app:layout_constraintStart_toEndOf="@id/explore_rank_tv"
         app:layout_constraintTop_toTopOf="parent"/>
+
+    <ImageView
+        android:id="@+id/explore_star_iv"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_star" android:layout_marginEnd="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/explore_date_tv"
+        app:layout_constraintBottom_toBottomOf="@id/explore_address"/>
 
     <TextView
         android:id="@+id/explore_address"
@@ -47,13 +58,10 @@
         android:id="@+id/after_card_img_rv"
         android:layout_width="224dp"
         android:layout_height="wrap_content"
-        android:minHeight="60dp"
         android:layout_marginTop="14dp"
         android:layout_marginStart="20dp"
         android:orientation="horizontal"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/explore_address"
-        />
-
+        app:layout_constraintTop_toBottomOf="@id/explore_address"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,99 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="20dp"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:background="@color/black">
 
-    <ImageView
-        android:id="@+id/after_back_iv"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/back"
-        android:layout_marginTop="34dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
-
-    <TextView
-        android:id="@+id/after_my_address_tv"
-        android:layout_width="wrap_content"
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/heading2_Semibold"
-        android:text="{서울특별시 동작구 상도로 396}"
-        android:layout_marginTop="34dp"
-        android:layout_marginEnd="20dp"
-        app:layout_constraintStart_toStartOf="@id/after_back_iv"
-        app:layout_constraintTop_toBottomOf="@id/after_back_iv"/>
-
-    <TextView
-        android:id="@+id/after_address_des_tv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="오늘 탐색하는 집에 대한 정보를 측정할게요"
-        android:layout_marginTop="10dp"
-        android:textAppearance="@style/body2_Median"
-        app:layout_constraintStart_toStartOf="@id/after_my_address_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_my_address_tv"/>
-
-    <include
-        android:id="@+id/after_progress_layout"
-        layout="@layout/layout_step_progress_finish"
-        android:layout_width="320dp"
-        android:layout_height="38dp"
-        android:layout_marginTop="34dp"
-        app:layout_constraintStart_toStartOf="@id/after_address_des_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_address_des_tv"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/after_card_rv"
-        android:layout_width="320dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="34dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/after_progress_layout"
-        tools:listitem="@layout/after_explore_card"
-        />
-
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/after_tab_layout"
-        android:layout_width="0dp"
-        android:layout_height="36dp"
-        android:layout_marginTop="40dp"
-        app:tabMode="fixed"
-        app:tabSelectedTextColor="@color/brand_500"
-        app:tabTextColor="@color/gray_600"
-        app:tabTextAppearance="@style/body2_Semibold"
-        app:tabIndicatorColor="@color/brand_500"
         android:background="@color/black"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/after_card_rv"/>
+        app:elevation="0dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="40dp"
+            android:paddingTop="20dp"
+            app:layout_scrollFlags="scroll">
+
+            <ImageView
+                android:id="@+id/after_back_iv"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginTop="20dp"
+                android:src="@drawable/back"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/after_my_address_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:layout_marginEnd="20dp"
+                android:text="{서울특별시 동작구 상도로 396}"
+                android:textAppearance="@style/heading2_Semibold"
+                app:layout_constraintStart_toStartOf="@id/after_back_iv"
+                app:layout_constraintTop_toBottomOf="@id/after_back_iv" />
+
+            <TextView
+                android:id="@+id/after_address_des_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="오늘 탐색하는 집에 대한 정보를 측정할게요"
+                android:textAppearance="@style/body2_Median"
+                app:layout_constraintStart_toStartOf="@id/after_my_address_tv"
+                app:layout_constraintTop_toBottomOf="@id/after_my_address_tv" />
+
+            <include
+                android:id="@+id/after_progress_layout"
+                layout="@layout/layout_step_progress_finish"
+                android:layout_width="320dp"
+                android:layout_height="38dp"
+                android:layout_marginTop="34dp"
+                app:layout_constraintStart_toStartOf="@id/after_address_des_tv"
+                app:layout_constraintTop_toBottomOf="@id/after_address_des_tv" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/after_card_rv"
+                android:layout_width="320dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/after_progress_layout"
+                tools:listitem="@layout/after_explore_card" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/after_tab_layout"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginHorizontal="20dp"
+            android:background="@color/black"
+            app:tabIndicatorColor="@color/brand_500"
+            app:tabMode="scrollable"
+            app:tabSelectedTextColor="@color/brand_500"
+            app:tabTextAppearance="@style/body2_Semibold"
+            app:tabTextColor="@color/gray_600" />
+
+    </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/after_viewpager"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="40dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/after_tab_layout"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/loading_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/black"
+        android:background="#80000000"
         android:clickable="true"
+        android:elevation="10dp"
         android:focusable="true"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible">
+        android:visibility="gone">
 
         <ProgressBar
             android:layout_width="wrap_content"
@@ -105,6 +110,4 @@
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -33,71 +33,88 @@ class AfterLightFragment : Fragment() {
         val activity = requireActivity() as? AfterExploreActivity ?: return
         val cardId = activity.currentCardId
 
-        Log.d("API_DEBUG", "[AfterLight] 로드 시작. CardID: $cardId")
+        Log.d("API_AFTER_LIGHT", "[채광] 점수 API 로드 시작. CardID: $cardId")
+
+        if (cardId.isEmpty()) {
+            showEmptyState("측정된 데이터가 없어 \n결과를 준비하지 못했어요")
+            return
+        }
 
         lifecycleScope.launch {
             try {
-                // ★ [수정] 전용 API 호출 (한방에 가져옴)
+                // ★ 원래 회원님이 작성하셨던 '점수 산출 전용 API'로 원상 복구!
                 val response = RetrofitClient.getInstance(requireContext()).getLightScoreList(cardId)
 
                 if (response.isSuccessful && response.body() != null) {
                     val scoreList = response.body()!!
-                    Log.d("API_DEBUG", "[AfterLight] 데이터 수신: ${scoreList.size}개")
+                    Log.d("API_AFTER_LIGHT", "[채광] 데이터 수신 성공! 갯수: ${scoreList.size}개")
 
                     if (scoreList.isNotEmpty()) {
-                        // API 응답 -> UI 모델 변환
                         val uiList = scoreList.map { item ->
-                            val rank = activity.getRankLabel(item.houseId) // A, B, C... 가져오기
-
                             ScheduleItem(
                                 houseId = item.houseId,
                                 address = "",
-                                rankLabel = rank,
-                                measuredLight = item.score.toFloat(), // 점수를 바로 넣음
+                                rankLabel = activity.getRankLabel(item.houseId),
+                                measuredLight = item.score.toFloat(), // ★ 서버가 준 0~100 점수 그대로 사용!
                                 time = ""
                             )
-                        }.sortedBy { it.rankLabel } // 랭크 순 정렬
+                        }.sortedBy { it.rankLabel }
 
-                        // 데이터가 0점보다 큰 게 있는지 확인 (그래프 그릴 필요가 있는지)
+                        // 점수가 0점 초과인 데이터가 하나라도 있는지 확인
                         val hasData = uiList.any { it.measuredLight > 0f }
 
                         if (hasData) {
-                            binding.beforeGraphRv.visibility = View.VISIBLE
-                            binding.emptyStateTv.visibility = View.GONE
+                            showDataState() // 숨겼던 UI 살리기
 
                             val adapter = LightGraphAdapter(uiList)
                             binding.beforeGraphRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
                             binding.beforeGraphRv.adapter = adapter
 
+                            val favoriteViewModel = androidx.lifecycle.ViewModelProvider(requireActivity())[FavoriteViewModel::class.java]
+                            favoriteViewModel.favoriteSet.observe(viewLifecycleOwner) { favorites ->
+                                adapter.updateFavorites(favorites)
+                            }
+
                             updateBestLightText(uiList)
                         } else {
-                            Log.w("API_DEBUG", "[AfterLight] 점수가 모두 0점임")
-                            showEmptyState("아직 측정된 채광 데이터가 없습니다.")
+                            Log.w("API_AFTER_LIGHT", "[채광] 점수가 모두 0점입니다.")
+                            showEmptyState("측정된 데이터가 없어 \n결과를 준비하지 못했어요")
                         }
                     } else {
-                        Log.w("API_DEBUG", "[AfterLight] 리스트가 비어있음")
-                        showEmptyState("채광 데이터가 없습니다.")
+                        Log.w("API_AFTER_LIGHT", "[채광] 빈 리스트 응답을 받았습니다.")
+                        showEmptyState("측정된 데이터가 없어 \n결과를 준비하지 못했어요")
                     }
                 } else {
-                    Log.e("API_DEBUG", "[AfterLight] API 실패: ${response.code()}")
+                    Log.e("API_AFTER_LIGHT", "[채광] 통신 실패! 코드: ${response.code()}")
                     showEmptyState("데이터를 불러오지 못했습니다.")
                 }
             } catch (e: Exception) {
-                Log.e("API_DEBUG", "[AfterLight] 에러 발생", e)
+                Log.e("API_AFTER_LIGHT", "[채광] 예외 발생: ${e.message}", e)
                 showEmptyState("오류가 발생했습니다.")
             }
         }
     }
 
+    // 데이터가 있을 때 뷰 복구
+    private fun showDataState() {
+        binding.afterLightTv.visibility = View.VISIBLE
+        binding.afterLightDesTv.visibility = View.VISIBLE
+        binding.graphContainer.visibility = View.VISIBLE
+
+        binding.emptyStateTv.visibility = View.GONE
+    }
+
+    // 데이터가 없을 때 뷰 숨김 및 텍스트 노출
     private fun showEmptyState(msg: String) {
+        binding.afterLightTv.visibility = View.GONE
+        binding.afterLightDesTv.visibility = View.GONE
+        binding.graphContainer.visibility = View.GONE
+
         binding.emptyStateTv.text = msg
         binding.emptyStateTv.visibility = View.VISIBLE
-        binding.beforeGraphRv.visibility = View.GONE
-        binding.afterLightTv.text = ""
     }
 
     private fun updateBestLightText(list: List<ScheduleItem>) {
-        // 점수가 가장 높은 아이템 찾기
         val bestItem = list.maxByOrNull { it.measuredLight } ?: return
 
         if (bestItem.measuredLight <= 0) {

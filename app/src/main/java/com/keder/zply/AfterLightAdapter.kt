@@ -12,6 +12,13 @@ class LightGraphAdapter(
     private val items: List<ScheduleItem>
 ) : RecyclerView.Adapter<LightGraphAdapter.ViewHolder>() {
 
+    private var favoriteSet: Set<Long> = emptySet()
+
+    fun updateFavorites(newSet: Set<Long>) {
+        this.favoriteSet = newSet
+        notifyDataSetChanged()
+    }
+
     inner class ViewHolder(val binding: ItemGraphBarBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ScheduleItem) {
             val context = binding.root.context
@@ -57,6 +64,12 @@ class LightGraphAdapter(
             binding.graphRankTv.setTextColor(textColor)
 
             binding.graphScoreTv.setTextColor(ContextCompat.getColor(context, R.color.white))
+
+            if (favoriteSet.contains(item.houseId)) {
+                binding.root.setBackgroundResource(R.drawable.stroke_2dp_white)
+            } else {
+                binding.root.setBackgroundResource(0)
+            }
         }
     }
 
