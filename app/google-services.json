@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "240512816684",
+    "project_id": "zply-50362",
+    "storage_bucket": "zply-50362.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:240512816684:android:06d3398e33883f158d2389",
+        "android_client_info": {
+          "package_name": "com.keder.zply"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvM6ikw2xTX-TK_F76M6yMcYQtIkj_gcI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

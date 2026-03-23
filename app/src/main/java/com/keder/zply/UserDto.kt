@@ -21,3 +21,8 @@ data class UserDto(
     @SerializedName("updatedAt")
     val updatedAt: String
 )
+
+data class AuthResponse(
+    val accessToken : String,
+    val regreshToken : String,
+)

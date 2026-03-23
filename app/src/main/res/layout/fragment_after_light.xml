@@ -45,17 +45,17 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/before_graph_rv"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:paddingTop="20dp"
             android:overScrollMode="never"
+            android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            app:layout_constraintWidth="true"
+            app:layout_constrainedWidth="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:listitem="@layout/item_graph_bar"/>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView

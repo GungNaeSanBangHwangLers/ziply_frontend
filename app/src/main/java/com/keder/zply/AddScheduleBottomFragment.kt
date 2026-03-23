@@ -14,7 +14,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -41,7 +40,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
     private lateinit var draftPrefs: SharedPreferences
     private val DRAFT_PREF_NAME = "schedule_draft_pref"
     private val KEY_DRAFT_LIST = "draft_schedule_list"
-    private var isSaveSuccess = false // 저장 완료 여부 체크
+    private var isSaveSuccess = false
 
     private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
 
@@ -89,7 +88,6 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         }
         return dialog
     }
-
     override fun onStart() {
         super.onStart()
         val dialog = dialog as? BottomSheetDialog
@@ -107,7 +105,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.dateTimeFlipper.visibility = View.GONE
-        binding.scheduleDateDisplayTv.text = "YYYY-MM-DD"
+        binding.scheduleDateDisplayTv.text = "YYYY-MM-DD" // 초기값
         setupDatePicker()
         setupTimePicker()
         setupInteractions()
@@ -121,7 +119,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             adapter = dateAdapter
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
             if (itemDecorationCount > 0) removeItemDecorationAt(0)
-            addItemDecoration(SymmetricalSpaceItemDecoration(22.dpToPx())) // 간격 데코레이션
+            addItemDecoration(SymmetricalSpaceItemDecoration(22.dpToPx()))
 
             dateSnapHelper = LinearSnapHelper()
             dateSnapHelper.attachToRecyclerView(this)
@@ -138,48 +136,33 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             })
         }
         binding.btnPrevMonth.setOnClickListener { moveDateByMonth(-1) }
-        binding.btnNextMonth.setOnClickListener { moveDateByMonth(1) }
+        binding.btnNextMonth.setOnClickListener { moveDateByMonth(+1) }
     }
 
     private fun scrollToToday() {
         val rv = binding.dateRecyclerView
-
         rv.post(object : Runnable {
             override fun run() {
-                // 1. 너비가 0이면 아직 준비 안 된 것 -> 10ms 뒤에 다시 시도
                 if (rv.width <= 0 || rv.layoutManager == null) {
                     rv.postDelayed(this, 10)
                     return
                 }
-
-                // 2. 너비가 확인되면 계산 시작
                 val totalWidth = rv.width.toFloat()
-
-                // XML상 회색 박스가 38dp이므로, 아이템 크기도 38dp라고 가정
                 val itemWidth = 38.dpToPx().toFloat()
-
-                // [수정] decorationLeft를 뺄셈에서 제거합니다.
-                // 공식: (화면중앙) - (아이템절반) = 아이템의 시작(Left) 좌표
                 val offset = ((totalWidth / 2) - (itemWidth / 2)).toInt()
 
                 val today = LocalDate.now()
                 val todayPos = dateAdapter.getPositionOfDate(today)
                 val targetPos = if (todayPos != -1) todayPos else 0
 
-                // 3. 레이아웃 매니저를 통해 이동 (offset 적용)
-                (rv.layoutManager as LinearLayoutManager)
-                    .scrollToPositionWithOffset(targetPos, offset)
-
-                // 4. 이동 후 텍스트 업데이트
+                (rv.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(targetPos, offset)
                 rv.post { updateDisplay() }
             }
         })
     }
 
-    // [추가] 키보드 내리기 & 엔터 처리 로직
     @SuppressLint("ClickableViewAccessibility")
     private fun setupKeyboardBehavior() {
-        // 1. 엔터(완료) 키 누르면 키보드 내리기
         binding.scheduleInputEt.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE ||
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
@@ -189,25 +172,17 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             }
             false
         }
-
-        // 2. 바텀시트 배경 터치 시 키보드 내리기
-        // root 뷰(ConstraintLayout)가 터치 이벤트를 받으려면 xml에 clickable=true가 있어야 함 (이미 되어 있음)
         binding.root.setOnTouchListener { v, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
-                // 현재 포커스가 EditText에 있다면 키보드 숨김
                 if (binding.scheduleInputEt.hasFocus()) {
                     hideKeyboard()
                     binding.scheduleInputEt.clearFocus()
                 }
             }
-            // false를 반환해야 다른 클릭 이벤트(버튼 등)를 방해하지 않음.
-            // 다만 배경을 터치한 경우라면 보통 true로 소비하거나 false로 둬도 상관없으나,
-            // 여기서는 터치 감지만 하고 이벤트 흐름은 유지합니다.
             false
         }
     }
 
-    // [추가] 키보드 숨김 함수
     private fun hideKeyboard() {
         val view = view?.findFocus() ?: View(context)
         imm.hideSoftInputFromWindow(view.windowToken, 0)
@@ -270,14 +245,15 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         val dateLm = binding.dateRecyclerView.layoutManager as LinearLayoutManager
         val dateView = dateSnapHelper.findSnapView(dateLm)
         val datePos = if (dateView != null) dateLm.getPosition(dateView) else -1
+
+        // [화면 표시용] 사용자가 보기에 예쁜 포맷 (저장용 아님)
         var dateText = "YYYY-MM-DD"
         if (datePos != RecyclerView.NO_POSITION) {
             val centerDate = dateAdapter.getDateAt(datePos)
-            dateText = centerDate.toString()
+            dateText = centerDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일", Locale.KOREA))
             binding.tvYearMonth.text = centerDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월", Locale.KOREA))
         }
 
-        // [수정 1] 화면에 표시되는 텍스트를 24시간제(15시)로 변환
         var timeText = ""
         if (binding.dateTimeFlipper.displayedChild == 1) {
             val hourStr = getText(binding.hourRecyclerView, hourSnapHelper, hourList, true)
@@ -285,12 +261,9 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             val ampmStr = getText(binding.ampmRecyclerView, ampmSnapHelper, ampmList, false)
 
             if (hourStr.isNotEmpty()) {
-                // 12시간제 -> 24시간제 변환 로직
                 var hourInt = hourStr.toInt()
                 if (ampmStr == "오후" && hourInt != 12) hourInt += 12
                 if (ampmStr == "오전" && hourInt == 12) hourInt = 0
-
-                // "오전/오후" 텍스트 제거하고 24시간 포맷으로 표시
                 timeText = " ${String.format("%02d", hourInt)}시 ${minuteStr}분"
             }
         }
@@ -308,14 +281,10 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
 
     private fun setupInteractions() {
         binding.scheduleDateDisplayTv.setOnClickListener {
-            // [수정] 날짜 입력창을 열 때 오늘 날짜로 이동!
             if (binding.dateTimeFlipper.visibility != View.VISIBLE) {
                 binding.dateTimeFlipper.visibility = View.VISIBLE
-
-                // 뷰가 그려질 시간을 주기 위해 post 사용
                 binding.dateRecyclerView.post {
                     scrollToToday()
-                    // 스크롤 후 화면 업데이트
                     binding.dateRecyclerView.post { updateDisplay() }
                 }
             }
@@ -352,23 +321,22 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
     private fun smoothScrollToPosition(position: Int) {
         val lm = binding.dateRecyclerView.layoutManager as LinearLayoutManager
         val scroller = object : androidx.recyclerview.widget.LinearSmoothScroller(context) {
-            override fun getHorizontalSnapPreference(): Int = SNAP_TO_ANY
+            // SNAP_TO_ANY 대신 SNAP_TO_START를 사용하여 확실하게 중앙 정렬
+            override fun getHorizontalSnapPreference(): Int = SNAP_TO_START
         }
         scroller.targetPosition = position
         lm.startSmoothScroll(scroller)
     }
 
-    // [수정 2] 저장되는 텍스트도 24시간제(15시)로 변환
+    // ★ [핵심 수정] 저장 시 포맷을 'ExploreScheduleFragment' 파서와 완벽 일치시킴
     private fun validateAndSave() {
         val address = binding.scheduleInputEt.text.toString()
         val dateLm = binding.dateRecyclerView.layoutManager as LinearLayoutManager
         val dateView = dateSnapHelper.findSnapView(dateLm)
 
-        // [수정 포인트 1] 단순히 visibility만 체크하는 것이 아니라, 현재 보여지는 화면이 '시간 선택(index 1)'인지 확인해야 합니다.
         val isTimePickerVisible = binding.dateTimeFlipper.visibility == View.VISIBLE &&
                 binding.dateTimeFlipper.displayedChild == 1
 
-        // [수정 포인트 2] 조건문에 isTimePickerVisible을 추가하여 시간 선택 화면일 때만 저장하도록 합니다.
         if (address.isBlank() || dateView == null || !isTimePickerVisible) {
             showCustomToast("전체 내용을 입력해주세요")
             return
@@ -376,22 +344,22 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
 
         val datePos = dateLm.getPosition(dateView)
         val selectedDate = dateAdapter.getDateAt(datePos)
-        val dateStr = selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.KOREA))
+
+        // 1. 날짜 포맷 수정: "yyyy-MM-dd" -> "yyyy. M. d." (점 뒤 공백 주의)
+        val dateStr = selectedDate.format(DateTimeFormatter.ofPattern("yyyy. M. d.", Locale.KOREA))
 
         val ampm = getText(binding.ampmRecyclerView, ampmSnapHelper, ampmList, false)
         val hour = getText(binding.hourRecyclerView, hourSnapHelper, hourList, true)
         val minute = getText(binding.minuteRecyclerView, minuteSnapHelper, minuteList, true)
 
-        // [수정 포인트 3] 빈 문자열("")이 올 경우 앱이 꺼지는 것을 방지하기 위해 toIntOrNull() 사용
-        // 위에서 isTimePickerVisible 체크를 했으므로 안전하지만, 이중 방지 차원입니다.
         var hourInt = hour.toIntOrNull() ?: 0
-
-        // 12시간제 -> 24시간제 변환
         if (ampm == "오후" && hourInt != 12) hourInt += 12
         if (ampm == "오전" && hourInt == 12) hourInt = 0
 
-        // "오전/오후" 제거 및 24시간 포맷 적용
-        val fullTimeStr = "$dateStr ${String.format("%02d", hourInt)}시 ${minute}분"
+        // 2. 시간 포맷 수정: "XX시 XX분" 제거 -> "HH:mm" (숫자와 콜론만)
+        val fullTimeStr = "$dateStr ${String.format("%02d", hourInt)}:${minute}"
+
+        // 결과 예시: "2026. 1. 19. 14:00" -> 이제 파서가 완벽하게 읽습니다.
 
         val listPrefs = requireContext().getSharedPreferences(DRAFT_PREF_NAME, Context.MODE_PRIVATE)
         val gson = Gson()
@@ -413,6 +381,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         onSaveCompleted?.invoke()
         dismiss()
     }
+
     override fun onDismiss(dialog: DialogInterface) {
         if (!isSaveSuccess) {
             draftPrefs.edit().putString("draft_address", binding.scheduleInputEt.text.toString()).apply()
@@ -428,8 +397,12 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         val lm = binding.dateRecyclerView.layoutManager as LinearLayoutManager
         val view = dateSnapHelper.findSnapView(lm) ?: return
         val pos = lm.getPosition(view)
-        val target = dateAdapter.getDateAt(pos).plusMonths(months).withDayOfMonth(1)
+
+        val target = dateAdapter.getDateAt(pos).plusMonths(months)
+
+        // 범위 체크 (시작일/종료일 벗어나지 않게)
         val finalDate = if (target.isBefore(startDate)) startDate else if (target.isAfter(endDate)) endDate else target
+
         smoothScrollToPosition(dateAdapter.getPositionOfDate(finalDate))
     }
 

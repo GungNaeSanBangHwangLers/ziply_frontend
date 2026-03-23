@@ -8,25 +8,29 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.AfterExploreCardBinding
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class AfterCardAdapter(private val items: List<ScheduleItem>) : RecyclerView.Adapter<AfterCardAdapter.ViewHolder>() {
 
     inner class ViewHolder(val binding: AfterExploreCardBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: ScheduleItem, position: Int) {
+        fun bind(item: ScheduleItem) { // [수정] position 제거
             val context = binding.root.context
 
-            // 1. 랭크 및 텍스트 설정
-            val rankChar = ('A'.code + position).toChar()
-            binding.exploreRankTv.text = rankChar.toString()
+            // [수정] position 대신 item.rankLabel 사용
+            // 예: "A" -> 'A'
+            val rankString = item.rankLabel
+            val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
+
+            binding.exploreRankTv.text = rankString
             setRankStyle(binding.exploreRankTv, rankChar)
 
             binding.exploreAddress.text = item.address
-            binding.exploreDateTv.text = "${item.time} 탐색"
+            val formattedDate = formatDate(item.time)
+            binding.exploreDateTv.text = "$formattedDate 탐색"
 
             if (item.imageList.isNotEmpty()) {
-                // 사진이 있으면 공간 보이기
                 binding.afterCardImgRv.visibility = View.VISIBLE
-
                 val imgAdapter = IngImageAdapter(item.imageList)
                 binding.afterCardImgRv.adapter = imgAdapter
                 binding.afterCardImgRv.layoutManager =
@@ -34,6 +38,23 @@ class AfterCardAdapter(private val items: List<ScheduleItem>) : RecyclerView.Ada
             } else {
                 binding.afterCardImgRv.visibility = View.GONE
             }
+        }
+    }
+
+    private fun formatDate(inputDate: String): String {
+        return try {
+            // 입력: 2026-03-10T14:00:00
+            // T가 포함된 경우와 아닌 경우 모두 대응
+            val inputFormatStr = if (inputDate.contains("T")) "yyyy-MM-dd'T'HH:mm:ss" else "yyyy-MM-dd HH:mm:ss"
+
+            val inputFormat = SimpleDateFormat(inputFormatStr, Locale.KOREA)
+            val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA) // 출력: 2026-03-10 14:00
+
+            val date = inputFormat.parse(inputDate)
+            if (date != null) outputFormat.format(date) else inputDate
+        } catch (e: Exception) {
+            // 파싱 실패 시 원본 그대로 반환 (앱 죽음 방지)
+            inputDate
         }
     }
 
@@ -68,7 +89,7 @@ class AfterCardAdapter(private val items: List<ScheduleItem>) : RecyclerView.Ada
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(items[position], position)
+        holder.bind(items[position])
     }
 
     override fun getItemCount(): Int = items.size
