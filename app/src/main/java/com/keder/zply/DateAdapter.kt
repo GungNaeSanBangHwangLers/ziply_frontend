@@ -1,73 +1,70 @@
 package com.keder.zply
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.time.LocalDate
-import java.time.format.TextStyle
-import java.time.temporal.ChronoUnit
-import java.util.Locale
-
 
 class DateAdapter(
-    private val startDate: LocalDate,
-    private val endDate: LocalDate,
+    private val dayList: List<LocalDate?>,
+    private val selectedDate: LocalDate?,
     private val onDateClick: (LocalDate) -> Unit
 ) : RecyclerView.Adapter<DateAdapter.DateViewHolder>() {
 
-    // 총 날짜 수 미리 계산 (매번 계산하지 않음)
-    private val totalDays = ChronoUnit.DAYS.between(startDate, endDate).toInt() + 1
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DateViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_calendar_date, parent, false) // XML 파일명 확인 (item_calender.xml -> item_calendar)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_calendar_date, parent, false)
         return DateViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: DateViewHolder, position: Int) {
-        // 날짜 계산은 가벼운 연산이므로 여기서 수행해도 괜찮습니다.
-        val date = startDate.plusDays(position.toLong())
-        holder.bind(date)
+        holder.bind(dayList[position])
     }
 
-    override fun getItemCount(): Int = totalDays
-
-    // 외부(Fragment)에서 특정 날짜의 포지션을 찾을 때 사용
-    fun getPositionOfDate(date: LocalDate): Int {
-        return ChronoUnit.DAYS.between(startDate, date).toInt()
-            .coerceIn(0, totalDays - 1) // 범위 밖으로 나가는 것 방지
-    }
-
-    // 외부(Fragment)에서 포지션으로 날짜를 가져올 때 사용
-    fun getDateAt(position: Int): LocalDate {
-        return startDate.plusDays(position.toLong())
-    }
+    override fun getItemCount(): Int = dayList.size
 
     inner class DateViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val dayTv: TextView = itemView.findViewById(R.id.day_tv)
 
-        private val dayText: TextView = itemView.findViewById(R.id.day_tv)
-        private val weekText: TextView = itemView.findViewById(R.id.date_tv)
+        fun bind(date: LocalDate?) {
+            if (date == null) {
+                dayTv.text = ""
+                // 빈칸일 때는 배경을 투명하게 하거나 숨김
+                dayTv.background = null
+                itemView.isEnabled = false
+                itemView.setOnClickListener(null)
+            } else {
+                itemView.isEnabled = true
+                dayTv.text = date.dayOfMonth.toString()
 
-        init {
-            // 리스너는 뷰홀더 생성 시 한 번만 등록 (메모리 최적화)
-            itemView.setOnClickListener {
-                val position = bindingAdapterPosition
-                if (position != RecyclerView.NO_POSITION) {
-                    val clickedDate = startDate.plusDays(position.toLong())
-                    onDateClick(clickedDate)
+                // ★ 핵심: 배경 리소스 재설정 (재사용 문제 방지)
+                dayTv.setBackgroundResource(R.drawable.bg_gray900_8)
+
+                val context = itemView.context
+                if (date == selectedDate) {
+                    // ★ 선택됨: Gray 800 (원래 색상)
+                    // (R.color.gray800이 정확한지 확인해주세요. 없다면 #424242 등)
+                    val color800 = ContextCompat.getColor(context, R.color.gray_900)
+                    dayTv.background.setTint(color800)
+
+                    dayTv.setTextColor(Color.WHITE)
+                } else {
+                    // ★ 선택 안됨: Gray 900 (더 어두운 색)
+                    // (R.color.gray900이 정확한지 확인해주세요)
+                    val color900 = ContextCompat.getColor(context, R.color.gray_800)
+                    dayTv.background.setTint(color900)
+
+                    // 선택 안된 날짜 텍스트 색상 (약간 흐리게)
+                    dayTv.setTextColor(Color.parseColor("#888888"))
+                }
+
+                itemView.setOnClickListener {
+                    onDateClick(date)
                 }
             }
-        }
-
-        fun bind(date: LocalDate) {
-            dayText.text = date.dayOfMonth.toString()
-
-            // 요일 처리는 Locale 객체를 계속 생성하지 않도록 주의 (기본 제공 함수 사용은 OK)
-            weekText.text = date.dayOfWeek
-                .getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-                .uppercase()
         }
     }
 }

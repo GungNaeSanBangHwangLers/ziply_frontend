@@ -1,5 +1,6 @@
 package com.keder.zply
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
@@ -18,6 +19,11 @@ class AfterLengthFragment : Fragment() {
     private var _binding: FragmentAfterLengthBinding? = null
     private val binding get() = _binding!!
 
+    private var originalScheduleList: List<ScheduleItem> = emptyList()
+    private var transportMessage: String = ""
+    private var bicycleMessage: String = ""
+    private lateinit var adapter: LengthRankAdapter
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAfterLengthBinding.inflate(inflater, container, false)
         return binding.root
@@ -25,7 +31,17 @@ class AfterLengthFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.btnRetry.setOnClickListener { loadDistanceData() }
+        setupChipListeners()
         loadDistanceData()
+    }
+
+    private fun setupChipListeners() {
+        binding.chipWalk.setOnClickListener { updateTransportUI(0) }
+        binding.chipPublic.setOnClickListener { updateTransportUI(1) }
+        binding.chipCar.setOnClickListener { updateTransportUI(2) }
+        binding.chipBike.setOnClickListener { updateTransportUI(3) }
     }
 
     private fun loadDistanceData() {
@@ -33,62 +49,104 @@ class AfterLengthFragment : Fragment() {
         val cardId = activity.currentCardId
         if (cardId.isEmpty()) return
 
+        binding.errorLayout.visibility = View.GONE
+
         lifecycleScope.launch {
             try {
-                // API 호출
                 val response = RetrofitClient.getInstance(requireContext()).getAnalysisDistance(cardId)
-
                 if (response.isSuccessful && response.body() != null) {
-                    val basePoints = response.body()!!.basePoints
-                    if (basePoints.isNotEmpty()) {
-                        val results = basePoints[0].results // 첫 번째 기준지(회사) 사용
+                    val distBody = response.body()?.firstOrNull()
+                    val results = distBody?.results ?: emptyList()
+                    transportMessage = distBody?.transportMessage ?: ""
+                    bicycleMessage = distBody?.bicycleMessage ?: ""
 
-                        // 데이터를 UI 모델로 변환
-                        val uiList = results.map { res ->
+                    if (results.isNotEmpty()) {
+                        originalScheduleList = results.map { res ->
                             ScheduleItem(
-                                houseId = res.houseId,
-                                walkingTimeMin = res.walkingTimeMin,
-                                walkingDistanceKm = res.walkingDistanceKm,
-                                // 액티비티의 마스터 리스트에서 랭크와 주소 가져오기
+                                houseId = res.houseId, address = "", time = "",
                                 rankLabel = activity.getRankLabel(res.houseId),
-                                address = activity.getAddress(res.houseId),
-                                time = "" // 랭킹 화면에선 시간 불필요
+                                walkingTimeMin = res.walkingTimeMin, walkingDistanceKm = res.walkingDistanceKm,
+                                transitTimeMin = res.transitTimeMin, transitPayment = res.transitPaymentStr ?: "",
+                                carTimeMin = res.carTimeMin, bicycleTimeMin = res.bicycleTimeMin
                             )
-                        }.sortedBy { it.rankLabel } // A, B, C 순서 정렬
+                        }
 
-                        binding.afterLengthRankRv.adapter = LengthRankAdapter(uiList)
+                        adapter = LengthRankAdapter(originalScheduleList)
+                        binding.afterLengthRankRv.adapter = adapter
                         binding.afterLengthRankRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
-                        updateShortestText(uiList)
+                        val favoriteViewModel = androidx.lifecycle.ViewModelProvider(requireActivity())[FavoriteViewModel::class.java]
+                        favoriteViewModel.favoriteSet.observe(viewLifecycleOwner) { favorites ->
+                            adapter.updateFavorites(favorites)
+                        }
+
+                        updateTransportUI(0) // 초기 설정 (도보)
+                    } else {
+                        binding.errorLayout.visibility = View.VISIBLE
                     }
+                } else {
+                    binding.errorLayout.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                binding.errorLayout.visibility = View.VISIBLE
             }
         }
     }
 
-    private fun updateShortestText(list: List<ScheduleItem>) {
-        if (list.isNotEmpty()) {
-            // 시간이 가장 짧은 항목 찾기
-            val bestItem = list.minByOrNull { it.walkingTimeMin }
-            val shortestRank = bestItem?.rankLabel ?: "-"
+    private fun updateTransportUI(mode: Int) {
+        if (originalScheduleList.isEmpty()) return
 
-            val fullText = "직주거리는 $shortestRank 가 \n가장 짧아요"
-            val spannable = SpannableString(fullText)
-            val index = fullText.indexOf(shortestRank)
-            if (index != -1) {
-                spannable.setSpan(
-                    ForegroundColorSpan(ContextCompat.getColor(requireContext(), R.color.brand_500)),
-                    index, index + shortestRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
+        val chips = listOf(binding.chipWalk, binding.chipPublic, binding.chipCar, binding.chipBike)
+        val selectedTextColor = ContextCompat.getColor(requireContext(), R.color.white)
+        val unselectedTextColor = ContextCompat.getColor(requireContext(), R.color.gray_500)
+        val brandColor = ContextCompat.getColor(requireContext(), R.color.brand_600)
+        val grayColor = ContextCompat.getColor(requireContext(), R.color.gray_800)
+
+        chips.forEachIndexed { index, textView ->
+            if (index == mode) {
+                textView.backgroundTintList = ColorStateList.valueOf(brandColor)
+                textView.setTextColor(selectedTextColor)
+            } else {
+                textView.backgroundTintList = ColorStateList.valueOf(grayColor)
+                textView.setTextColor(unselectedTextColor)
             }
+        }
+
+        when (mode) {
+            1 -> {
+                binding.tvTransportInfo.visibility = if (transportMessage.isNotEmpty()) View.VISIBLE else View.GONE
+                binding.tvTransportInfo.text = transportMessage
+            }
+            3 -> {
+                binding.tvTransportInfo.visibility = if (bicycleMessage.isNotEmpty()) View.VISIBLE else View.GONE
+                binding.tvTransportInfo.text = bicycleMessage
+            }
+            else -> binding.tvTransportInfo.visibility = View.GONE
+        }
+
+        val sortedList = originalScheduleList.sortedBy { item ->
+            when (mode) {
+                0 -> item.walkingTimeMin; 1 -> item.transitTimeMin; 2 -> item.carTimeMin; 3 -> item.bicycleTimeMin; else -> item.walkingTimeMin
+            }
+        }
+
+        adapter.updateList(sortedList) // ★ 어댑터에 updateList 메서드가 필요합니다!
+        adapter.setMode(mode)
+
+        // 상단 안내 문구 갱신 (물리적 거리 기준)
+        val shortestDistanceItem = originalScheduleList.filter { it.walkingDistanceKm > 0.0 || it.walkingTimeMin > 0 }
+            .minByOrNull { if (it.walkingDistanceKm > 0.0) it.walkingDistanceKm else it.walkingTimeMin.toDouble() }
+
+        val brand700 = ContextCompat.getColor(requireContext(), R.color.brand_700)
+        if (shortestDistanceItem != null) {
+            val rank = shortestDistanceItem.rankLabel
+            val text = "직주거리는 $rank 가 \n가장 짧아요"
+            val spannable = SpannableString(text)
+            val idx = text.indexOf(rank)
+            if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             binding.afterLengthRankTv.text = spannable
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
+    override fun onDestroyView() { super.onDestroyView(); _binding = null }
 }

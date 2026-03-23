@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "1.1"
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.play.services.maps)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,6 +71,9 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation(("com.google.android.material:material:1.13.0"))
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("com.naver.maps:map-sdk:3.23.1")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+
 
 }

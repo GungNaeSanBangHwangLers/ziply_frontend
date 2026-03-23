@@ -17,6 +17,13 @@ class GraphAdapter(
     private var isDayMode = true
     private var selectedPosition = -1
 
+    private var favoriteSet: Set<Long> = emptySet()
+
+    fun updateFavorites(newSet: Set<Long>) {
+        this.favoriteSet = newSet
+        notifyDataSetChanged()
+    }
+
     fun setMode(isDay: Boolean) {
         this.isDayMode = isDay
         selectedPosition = -1
@@ -28,13 +35,11 @@ class GraphAdapter(
         fun bind(item: ScheduleItem, position: Int) {
             val context = binding.root.context
 
-            // [수정] 1. 랭크 문자: item.rankLabel 사용
             val rankString = item.rankLabel
             val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
             binding.graphRankTv.text = rankString
 
-            // [수정] 2. 색상 인덱스 계산 (A -> 0, B -> 1 ...)
-            // 기존에는 position을 썼지만, 이제는 랭크 알파벳을 숫자로 변환해서 씀
+
             val rankIndex = if (rankChar in 'A'..'Z') rankChar - 'A' else 7
 
             val score = if (isDayMode) item.dayScore else item.nightScore
@@ -47,7 +52,6 @@ class GraphAdapter(
             params.height = dpToPx(context, heightDp)
             binding.graphBarView.layoutParams = params
 
-            // 3. 색상 적용 시 rankIndex 사용
             val rankColor = getRankColor(context, rankIndex)
             val textColor = getRankTextColor(context, rankIndex)
 
@@ -62,7 +66,6 @@ class GraphAdapter(
             binding.graphRankTv.background.setTint(rankColor)
             binding.graphRankTv.setTextColor(textColor)
 
-            // 4. 선택 상태 UI
             binding.root.alpha = 1.0f
 
             if (selectedPosition == position) {
@@ -82,6 +85,12 @@ class GraphAdapter(
                     onItemClick("[$rankChar] $desc")
                 }
                 notifyDataSetChanged()
+            }
+
+            if (favoriteSet.contains(item.houseId)) {
+                binding.root.setBackgroundResource(R.drawable.stroke_2dp_white)
+            } else {
+                binding.root.setBackgroundResource(0)
             }
         }
     }

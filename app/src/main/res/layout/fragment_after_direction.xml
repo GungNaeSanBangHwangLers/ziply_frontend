@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:fillViewport="true"
-    xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <androidx.constraintlayout.widget.ConstraintLayout xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingBottom="60dp"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp">
 
         <TextView
             android:id="@+id/after_direction_title_tv"
@@ -17,7 +13,6 @@
             android:layout_height="wrap_content"
             android:text="건물의 방향정보를 \n알려줄게요"
             android:textAppearance="@style/body1_Semibold"
-            android:layout_marginStart="20dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"/>
 
@@ -32,15 +27,15 @@
             app:layout_constraintTop_toBottomOf="@id/after_direction_title_tv"/>
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/after_direction_rv"
-            android:layout_width="320dp"
+            android:id="@+id/direction_cards_rv"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:layout_constraintStart_toStartOf="@id/after_direction_des_tv"
-            app:layout_constraintTop_toBottomOf="@id/after_direction_des_tv"
-            tools:listitem="@layout/item_after_direction"
-            android:layout_marginBottom="48dp"
-            />
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintTop_toBottomOf="@id/after_direction_des_tv"/>
+
         <TextView
             android:id="@+id/empty_state_tv"
             android:layout_width="wrap_content"
@@ -48,11 +43,11 @@
             android:text="측정된 데이터가 없어 \n결과를 준비하지 못했어요"
             android:gravity="center"
             android:textColor="@color/gray_400"
-            android:textAppearance="@style/body2_Regular"
             android:visibility="gone"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

@@ -34,7 +34,7 @@ class AuthInterceptor(private val context: Context) : Interceptor {
 
 // 2. Retrofit 클라이언트 객체
 object RetrofitClient {
-    private const val BASE_URL = "http://20.41.104.242:8000/"
+    private const val BASE_URL = "http://40.82.136.28:8000/"
 
     private var retrofit: Retrofit? = null
 

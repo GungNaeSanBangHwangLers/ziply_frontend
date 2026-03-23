@@ -1,42 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
     xmlns:android="http://schemas.android.com/apk/res/android">
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    <androidx.constraintlayout.widget.ConstraintLayout xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_marginTop="40dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/after_length_rank_tv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="직주거리는 {}가 \n가장 짧아요"
-        android:textAppearance="@style/body1_Semibold"
-        android:layout_marginStart="20dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        <TextView
+            android:id="@+id/after_length_rank_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="직주거리는 {}가 \n가장 짧아요"
+            android:textAppearance="@style/body1_Semibold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
 
-    <TextView
-        android:id="@+id/after_length_rank_des_tv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="도보거리를 기준으로 직주거리를 알려드릴게요"
-        android:textAppearance="@style/caption1_Median"
-        android:layout_marginTop="10dp"
-        app:layout_constraintStart_toStartOf="@id/after_length_rank_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_length_rank_tv"/>
+        <TextView
+            android:id="@+id/after_length_rank_des_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="선택하신 기준으로 직주거리를 알려드릴게요"
+            android:textAppearance="@style/caption1_Median"
+            android:layout_marginTop="10dp"
+            app:layout_constraintStart_toStartOf="@id/after_length_rank_tv"
+            app:layout_constraintTop_toBottomOf="@id/after_length_rank_tv"/>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/after_length_rank_rv"
-        android:layout_width="320dp"
-        android:layout_height="106dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintStart_toStartOf="@id/after_length_rank_des_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_length_rank_des_tv"
-        tools:listitem="@layout/item_length_rank"/>
+        <LinearLayout
+            android:id="@+id/layout_chips"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:weightSum="4"
+            android:padding="6dp"
+            android:background="@drawable/gray_bg20"
+            android:backgroundTint="@color/gray_800"
+            app:layout_constraintTop_toBottomOf="@id/after_length_rank_des_tv"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <TextView android:id="@+id/chip_walk" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:gravity="center" android:text="도보" android:background="@drawable/gray_bg20" android:backgroundTint="@color/brand_600" android:textColor="@color/white" android:textAppearance="@style/caption1_Semibold"/>
+            <TextView android:id="@+id/chip_public" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center" android:background="@drawable/gray_bg20" android:text="대중교통" android:textColor="@color/gray_500" android:textAppearance="@style/caption1_Semibold"/>
+            <TextView android:id="@+id/chip_car" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center" android:background="@drawable/gray_bg20" android:text="자동차" android:textColor="@color/gray_500" android:textAppearance="@style/caption1_Semibold"/>
+            <TextView android:id="@+id/chip_bike" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center" android:background="@drawable/gray_bg20" android:text="자전거" android:textColor="@color/gray_500" android:textAppearance="@style/caption1_Semibold"/>
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/after_length_rank_rv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/layout_chips" />
+
+        <TextView
+            android:id="@+id/tv_transport_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/stroke_gray800"
+            android:padding="16dp"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/after_length_rank_rv"/>
+
+        <LinearLayout
+            android:id="@+id/error_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="데이터를 불러오지 못했습니다." android:textColor="@color/gray_400"/>
+            <Button android:id="@+id/btn_retry" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="새로고침" android:layout_marginTop="10dp"/>
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

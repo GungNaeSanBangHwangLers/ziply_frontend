@@ -1,24 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="@drawable/gray_bg16"
     android:layout_width="276dp"
     android:layout_height="366dp"
+    android:padding="20dp"
     android:layout_marginRight="14dp">
 
-    <LinearLayout
-        android:id="@+id/rank_container_ll"
+    <TextView
+        android:id="@+id/item_rank_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_100"
+        android:text="A"
+        android:gravity="center"
+        android:textColor="@color/brand_800"
+        android:textAppearance="@style/caption1_Semibold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/after_rooms_rv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="20dp"
-        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@id/item_rank_tv"
+        tools:listitem="@layout/item_after_direction_room"/>
 
     <TextView
         android:id="@+id/item_direction_tv"
@@ -26,16 +36,14 @@
         android:layout_height="wrap_content"
         android:text="남향"
         android:textAppearance="@style/body1_Semibold"
-        android:layout_marginStart="20dp"
         android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/rank_container_ll"/>
+        app:layout_constraintTop_toBottomOf="@id/after_rooms_rv"/>
 
     <TextView
         android:id="@+id/item_direction_des_tv"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
         android:layout_marginTop="10dp"
         android:text="하루 종일 햇빛이 고르게 들어와요. 집에 머무는 시간이 많고 쾌적한 주거환경을 선호하는 분께 추천드려요."
@@ -48,7 +56,6 @@
         android:layout_width="236dp"
         android:layout_height="84dp"
         android:background="@drawable/black_badge2"
-        android:layout_marginStart="20dp"
         android:layout_marginTop="8dp"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
@@ -82,7 +89,6 @@
         android:layout_width="236dp"
         android:layout_height="84dp"
         android:background="@drawable/black_badge2"
-        android:layout_marginStart="20dp"
         android:layout_marginTop="8dp"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"

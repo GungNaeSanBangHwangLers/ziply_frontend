@@ -30,14 +30,14 @@ class LoginActivity : AppCompatActivity() {
         // Token Manager 초기화
         tokenManager = TokenManager(this)
 
-        if (tokenManager.getAccessToken() != null) {
-            // 이미 로그인된 상태이므로 메인으로 바로 이동
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // 뒤로가기 방지
-            startActivity(intent)
-            finish() // 로그인 액티비티 즉시 종료
-            return // 아래의 setContentView 등을 실행하지 않도록 리턴
-        }
+//        if (tokenManager.getAccessToken().isNullOrEmpty()) {
+//            // 이미 로그인된 상태이므로 메인으로 바로 이동
+//            val intent = Intent(this, MainActivity::class.java)
+//            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // 뒤로가기 방지
+//            startActivity(intent)
+//            finish() // 로그인 액티비티 즉시 종료
+//            return // 아래의 setContentView 등을 실행하지 않도록 리턴
+//        }
 
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)

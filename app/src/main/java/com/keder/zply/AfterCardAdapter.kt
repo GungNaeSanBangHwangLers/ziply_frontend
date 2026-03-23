@@ -1,5 +1,6 @@
 package com.keder.zply
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,57 +9,68 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.AfterExploreCardBinding
-import java.text.SimpleDateFormat
-import java.util.Locale
 
-class AfterCardAdapter(private val items: List<ScheduleItem>) : RecyclerView.Adapter<AfterCardAdapter.ViewHolder>() {
+class AfterCardAdapter(
+    private val items: List<ScheduleItem>,
+    private var favoriteSet: Set<Long> = emptySet(),
+    private val onStarClick: (Long) -> Unit,
+    private val onImageClick: (ScheduleItem) -> Unit // 사진 다이얼로그용 클릭 리스너
+) : RecyclerView.Adapter<AfterCardAdapter.ViewHolder>() {
+
+    fun updateFavorites(newSet: Set<Long>) {
+        this.favoriteSet = newSet
+        notifyDataSetChanged()
+    }
 
     inner class ViewHolder(val binding: AfterExploreCardBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: ScheduleItem) { // [수정] position 제거
+        fun bind(item: ScheduleItem) {
             val context = binding.root.context
 
-            // [수정] position 대신 item.rankLabel 사용
-            // 예: "A" -> 'A'
-            val rankString = item.rankLabel
-            val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
+            // 1. 라벨 색상 및 텍스트 적용 (새 XML의 ID 사용: exploreRankTv)
+            binding.exploreRankTv.text = item.rankLabel
+            setRankStyle(binding.exploreRankTv, item.rankLabel)
 
-            binding.exploreRankTv.text = rankString
-            setRankStyle(binding.exploreRankTv, rankChar)
-
+            binding.exploreDateTv.text = "${item.time} 탐색"
             binding.exploreAddress.text = item.address
-            val formattedDate = formatDate(item.time)
-            binding.exploreDateTv.text = "$formattedDate 탐색"
 
-            if (item.imageList.isNotEmpty()) {
-                binding.afterCardImgRv.visibility = View.VISIBLE
-                val imgAdapter = IngImageAdapter(item.imageList)
-                binding.afterCardImgRv.adapter = imgAdapter
-                binding.afterCardImgRv.layoutManager =
-                    LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            val isFavorite = favoriteSet.contains(item.houseId)
+            if (isFavorite) {
+                binding.exploreStarIv.setImageResource(R.drawable.ic_star_filled) // 채워진 별 (본인의 파일명에 맞게 수정)
+                binding.root.setBackgroundResource(R.drawable.stroke_2dp_white)   // 하얀 테두리 배경
             } else {
+                binding.exploreStarIv.setImageResource(R.drawable.ic_star)        // 빈 별
+                binding.root.setBackgroundResource(R.drawable.gray_bg)            // 원래 배경 (XML 기존 배경에 맞게 수정)
+            }
+
+            // ★ 별자리(별 이미지) 클릭 이벤트
+            binding.exploreStarIv.setOnClickListener {
+                onStarClick(item.houseId)
+            }
+
+            // 2. 사진 리스트 유무에 따른 상태 전환
+            if (item.imageList.isEmpty()) {
+                // 사진이 없으면 리사이클러뷰 전체를 깔끔하게 숨깁니다.
                 binding.afterCardImgRv.visibility = View.GONE
+            } else {
+                // 사진이 있으면 나타내고, Glide 어댑터 연결
+                binding.afterCardImgRv.visibility = View.VISIBLE
+
+                binding.afterCardImgRv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+                binding.afterCardImgRv.adapter = IngImageAdapter(item.imageList)
+
+                // ★ 사진 영역 터치 시 다이얼로그 띄우기
+                binding.afterCardImgRv.setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_UP) {
+                        onImageClick(item)
+                    }
+                    false
+                }
             }
         }
     }
 
-    private fun formatDate(inputDate: String): String {
-        return try {
-            // 입력: 2026-03-10T14:00:00
-            // T가 포함된 경우와 아닌 경우 모두 대응
-            val inputFormatStr = if (inputDate.contains("T")) "yyyy-MM-dd'T'HH:mm:ss" else "yyyy-MM-dd HH:mm:ss"
-
-            val inputFormat = SimpleDateFormat(inputFormatStr, Locale.KOREA)
-            val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA) // 출력: 2026-03-10 14:00
-
-            val date = inputFormat.parse(inputDate)
-            if (date != null) outputFormat.format(date) else inputDate
-        } catch (e: Exception) {
-            // 파싱 실패 시 원본 그대로 반환 (앱 죽음 방지)
-            inputDate
-        }
-    }
-
-    private fun setRankStyle(textView: TextView, rank: Char) {
+    // A~G별 색상 입히는 함수
+    private fun setRankStyle(textView: TextView, rank: String) {
         val context = textView.context
         val brand100 = ContextCompat.getColor(context, R.color.brand_100)
         val brand800 = ContextCompat.getColor(context, R.color.brand_800)
@@ -71,15 +83,16 @@ class AfterCardAdapter(private val items: List<ScheduleItem>) : RecyclerView.Ada
         val gray700 = ContextCompat.getColor(context, R.color.gray_700)
         val gray200 = ContextCompat.getColor(context, R.color.gray_200)
 
-        when (rank) {
-            'A' -> { textView.background.setTint(brand100); textView.setTextColor(brand800) }
-            'B' -> { textView.background.setTint(brand400); textView.setTextColor(white) }
-            'C' -> { textView.background.setTint(brand700); textView.setTextColor(white) }
-            'D' -> { textView.background.setTint(brand950); textView.setTextColor(white) }
-            'E' -> { textView.background.setTint(white); textView.setTextColor(black) }
-            'F' -> { textView.background.setTint(gray400); textView.setTextColor(white) }
-            'G' -> { textView.background.setTint(gray700); textView.setTextColor(white) }
-            else -> { textView.background.setTint(gray200); textView.setTextColor(black) }
+        val rankChar = if (rank.isNotEmpty()) rank[0] else '?'
+        when (rankChar) {
+            'A' -> { textView.backgroundTintList = ColorStateList.valueOf(brand100); textView.setTextColor(brand800) }
+            'B' -> { textView.backgroundTintList = ColorStateList.valueOf(brand400); textView.setTextColor(white) }
+            'C' -> { textView.backgroundTintList = ColorStateList.valueOf(brand700); textView.setTextColor(white) }
+            'D' -> { textView.backgroundTintList = ColorStateList.valueOf(brand950); textView.setTextColor(white) }
+            'E' -> { textView.backgroundTintList = ColorStateList.valueOf(white); textView.setTextColor(black) }
+            'F' -> { textView.backgroundTintList = ColorStateList.valueOf(gray400); textView.setTextColor(white) }
+            'G' -> { textView.backgroundTintList = ColorStateList.valueOf(gray700); textView.setTextColor(white) }
+            else -> { textView.backgroundTintList = ColorStateList.valueOf(gray200); textView.setTextColor(black) }
         }
     }
 

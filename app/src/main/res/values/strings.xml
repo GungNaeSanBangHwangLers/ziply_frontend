@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">ZIPLY</string>
     <string name="web_client_id">151591783378-d1vt407c2dbvjep2tnolnh3admqfh3t7.apps.googleusercontent.com</string>
+    <string name="base_url">http://40.82.136.28:8000</string>
 </resources>

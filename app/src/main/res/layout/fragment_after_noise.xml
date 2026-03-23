@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true"
     xmlns:android="http://schemas.android.com/apk/res/android">
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_marginTop="40dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:layout_marginBottom="60dp"
-    android:paddingBottom="60dp"
+    android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
@@ -17,7 +15,6 @@
         android:layout_height="wrap_content"
         android:text="낮에는 {Char}, 밤에는 {Char}가 \n소음이 가장 낮아요."
         android:textAppearance="@style/body1_Semibold"
-        android:layout_marginStart="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
@@ -31,71 +28,55 @@
         app:layout_constraintStart_toStartOf="@id/after_noise_tv"
         app:layout_constraintTop_toBottomOf="@id/after_noise_tv"/>
 
-    <TextView
-        android:id="@+id/after_day_tv"
-        android:layout_width="79dp"
-        android:layout_height="34dp"
-        android:background="@drawable/blue_bg6"
-        android:gravity="center"
-        android:text="낮"
-        android:layout_marginTop="16dp"
-        app:layout_constraintStart_toStartOf="@id/after_noise_des_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_noise_des_tv"/>
-
-    <TextView
-        android:id="@+id/after_night_tv"
-        android:layout_width="79dp"
-        android:layout_height="34dp"
-        android:background="@drawable/gray_bg6"
-        android:gravity="center"
-        android:text="밤"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="10dp"
-        app:layout_constraintStart_toEndOf="@id/after_day_tv"
-        app:layout_constraintTop_toBottomOf="@id/after_noise_des_tv"/>
-
-
     <LinearLayout
-        android:id="@+id/tab_container"
-        android:layout_width="wrap_content"
+        android:id="@+id/tab_day_night_container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="16dp"
-        app:layout_constraintStart_toStartOf="@id/after_noise_des_tv"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/gray_bg20"
+        android:backgroundTint="@color/gray_900"
+        android:padding="6dp"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/after_noise_des_tv">
 
         <TextView
-            android:id="@+id/after_day_btn"
-            android:layout_width="79dp"
-            android:layout_height="34dp"
-            android:background="@drawable/blue_bg6"
+            android:id="@+id/after_day_tv"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:background="@drawable/gray_bg20"
+            android:backgroundTint="@color/brand_600"
             android:gravity="center"
+            android:layout_weight="1"
             android:text="낮"
             android:textColor="@color/white"
-            android:textStyle="bold"/>
+            android:textAppearance="@style/caption1_Semibold"/>
 
         <TextView
-            android:id="@+id/after_night_btn"
-            android:layout_width="79dp"
-            android:layout_height="34dp"
+            android:id="@+id/after_night_tv"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
             android:layout_marginStart="10dp"
-            android:background="@drawable/gray_bg6"
+            android:background="@drawable/gray_bg20"
+            android:backgroundTint="@color/gray_900"
             android:gravity="center"
+            android:layout_weight="1"
             android:text="밤"
-            android:textColor="@color/gray_500"
-            android:textStyle="bold"/>
+            android:textColor="@color/white"
+            android:textAppearance="@style/caption1_Semibold"/>
     </LinearLayout>
+
+
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/graph_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="30dp"
         android:background="@drawable/gray_bg16"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tab_container">
+        app:layout_constraintTop_toBottomOf="@id/tab_day_night_container">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/before_graph_rv"

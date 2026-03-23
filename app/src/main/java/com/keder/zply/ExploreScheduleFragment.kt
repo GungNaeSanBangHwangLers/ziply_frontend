@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -73,15 +74,14 @@ class ExploreScheduleFragment : Fragment() {
             return
         }
 
+        // 버튼 연타 방지
         binding.addressNextBtnMb.isEnabled = false
 
         lifecycleScope.launch {
             try {
-                // ★ [로그 추가] 전송 전 리스트 개수 확인
                 Log.d("API_DEBUG", "전송할 일정 개수: ${scheduleList.size}개")
                 scheduleList.forEach { Log.d("API_DEBUG", " - 주소: ${it.address}, 시간: ${it.time}") }
 
-                // RequestHouse 생성 (List 변환)
                 val requestHouses = scheduleList.map { item ->
                     RequestHouse(
                         address = item.address,
@@ -94,7 +94,6 @@ class ExploreScheduleFragment : Fragment() {
                     houses = requestHouses
                 )
 
-                // ★ [로그 추가] 최종 요청 객체 확인
                 Log.d("API_DEBUG", "최종 요청 객체 houses 개수: ${request.houses.size}")
 
                 val response = RetrofitClient.getInstance(requireContext()).createReviewCard(request)
@@ -125,17 +124,13 @@ class ExploreScheduleFragment : Fragment() {
 
     private fun convertToServerFormat(displayTime: String): String {
         return try {
-            // 입력: "yyyy. M. d. HH:mm" (공백, 점 주의)
             val inputFormat = SimpleDateFormat("yyyy. M. d. HH:mm", Locale.KOREA)
-
-            // ★ 수정: "yyyy-MM-dd HH:mm" (T 제거, 스크린샷에는 T가 없었음)
-            // 만약 서버가 T를 원하면 "yyyy-MM-dd'T'HH:mm:ss" 로 변경해야 함
-            // 하지만 사용자님 피드백에 따라 "yyyy-MM-dd HH:mm"으로 유지합니다.
+            val date = inputFormat.parse(displayTime)
+            val safeDate = date ?: Date()
             val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
-
-            val date = inputFormat.parse(displayTime) ?: Date()
-            outputFormat.format(date)
+            outputFormat.format(safeDate)
         } catch (e: Exception) {
+            Log.e("DateConvert", "날짜 변환 실패: $displayTime", e)
             val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
             outputFormat.format(Date())
         }
@@ -172,7 +167,6 @@ class ExploreScheduleFragment : Fragment() {
     private fun updateUIState() {
         binding.scheduleRecyclerV.visibility = if (scheduleList.isEmpty()) View.GONE else View.VISIBLE
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()

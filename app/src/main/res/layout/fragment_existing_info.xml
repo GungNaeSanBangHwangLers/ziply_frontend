@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="40dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/existing_card_rv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:listitem="@layout/item_existing_info_card"/>
+
+        <TextView
+            android:id="@+id/tab_distance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
+            android:text="직주거리"
+            android:textColor="@color/brand_600"
+            android:textAppearance="@style/body2_Semibold"
+            android:paddingVertical="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/existing_card_rv" />
+        <TextView
+            android:id="@+id/tab_noise"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="소음"
+            android:textColor="@color/gray_600"
+            android:textAppearance="@style/body2_Semibold"
+            android:paddingVertical="8dp"
+            android:layout_marginStart="24dp"
+            app:layout_constraintStart_toEndOf="@id/tab_distance"
+            app:layout_constraintTop_toTopOf="@id/tab_distance" />
+        <View
+            android:id="@+id/tab_indicator"
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:background="@color/brand_600"
+            android:layout_marginTop="-2dp"
+
+            app:layout_constraintStart_toStartOf="parent"
+
+            app:layout_constraintTop_toBottomOf="@id/tab_distance" />
+
+        <View
+            android:id="@+id/divider_line"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/gray_600"
+            app:layout_constraintTop_toBottomOf="@id/tab_indicator" />
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/layout_content_distance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="visible"
+            app:layout_constraintTop_toBottomOf="@id/divider_line">
+
+            <TextView
+                android:id="@+id/length_rank_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="직주거리는 A가 \n가장 짧아요"
+                android:textColor="@color/white"
+                android:textAppearance="@style/body1_Semibold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
+            <TextView
+                android:id="@+id/length_rank_des_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="{직장 주소}부터 각 주거지까지의 거리예요."
+                android:textAppearance="@style/caption1_Median"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/length_rank_tv"/>
+
+            <LinearLayout
+                android:id="@+id/layout_chips"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal"
+                android:weightSum="4"
+                android:padding="6dp"
+                android:background="@drawable/gray_bg20"
+                android:backgroundTint="@color/gray_800"
+                app:layout_constraintTop_toBottomOf="@id/length_rank_des_tv"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/chip_walk"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="도보"
+                    android:background="@drawable/gray_bg20"
+                    android:backgroundTint="@color/brand_600"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+
+                <TextView
+                    android:id="@+id/chip_public"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:gravity="center"
+                    android:background="@drawable/gray_bg20"
+                    android:text="대중교통"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+
+                <TextView
+                    android:id="@+id/chip_car"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:gravity="center"
+                    android:background="@drawable/gray_bg20"
+                    android:text="자동차"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+
+                <TextView
+                    android:id="@+id/chip_bike"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:gravity="center"
+                    android:background="@drawable/gray_bg20"
+                    android:text="자전거"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/length_rank_rv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:layout_constraintTop_toBottomOf="@id/layout_chips"
+                tools:listitem="@layout/item_length_rank"
+                tools:itemCount="3"/>
+
+            <TextView
+                android:id="@+id/tv_transport_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/stroke_gray800"
+                android:padding="10dp"
+                android:text="교통 정보 설명"
+                android:textAppearance="@style/caption2_Median"
+                android:textColor="@color/white"
+                android:lineSpacingExtra="4dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/length_rank_rv"
+                tools:visibility="visible"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/layout_content_noise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/divider_line">
+
+            <TextView
+                android:id="@+id/noise_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="낮에는 A, 밤에는 B가 \n소음이 가장 낮아요."
+                android:textAppearance="@style/body1_Semibold"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
+            <TextView
+                android:id="@+id/noise_des_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="각 수치를 터치하면 소음 예측 지수의 근거를 볼 수 있어요."
+                android:textAppearance="@style/caption1_Median"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/noise_tv"/>
+
+            <LinearLayout
+                android:id="@+id/tab_day_night_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/gray_bg20"
+                android:backgroundTint="@color/gray_900"
+                android:padding="6dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/noise_des_tv">
+
+                <TextView
+                    android:id="@+id/day_btn"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/gray_bg20"
+                    android:backgroundTint="@color/brand_600"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:text="낮"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+
+                <TextView
+                    android:id="@+id/night_btn"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/gray_bg20"
+                    android:backgroundTint="@color/gray_900"
+                    android:gravity="center"
+                    android:layout_weight="1"
+                    android:text="밤"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Semibold"/>
+            </LinearLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/graph_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:paddingBottom="20dp"
+                android:background="@drawable/gray_bg16"
+                app:layout_constraintTop_toBottomOf="@id/tab_day_night_container">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/graph_rv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
+                    android:overScrollMode="never"
+                    app:layout_constrainedWidth="true"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:orientation="horizontal"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <TextView
+                    android:id="@+id/graph_detail_tv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:padding="10dp"
+                    android:background="@drawable/gray_bg"
+                    android:text="상세 정보"
+                    android:textAppearance="@style/caption1_Median"
+                    android:textColor="@color/white"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/graph_rv"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <FrameLayout
+            android:id="@+id/loading_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80000000"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminateTint="@color/brand_100"
+                android:layout_gravity="center"/>
+        </FrameLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

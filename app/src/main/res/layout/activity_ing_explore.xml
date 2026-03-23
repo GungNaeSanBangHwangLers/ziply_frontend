@@ -2,6 +2,8 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="20dp"
+    android:fillViewport="true"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
@@ -10,8 +12,7 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@drawable/back"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="34dp"
+        android:layout_marginTop="20dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
@@ -39,22 +40,71 @@
     <include
         android:id="@+id/ing_progress_layout"
         layout="@layout/layout_step_progress_ing"
-        android:layout_width="320dp"
+        android:layout_width="match_parent"
         android:layout_height="38dp"
         android:layout_marginTop="34dp"
-        app:layout_constraintStart_toStartOf="@id/ing_address_des_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ing_address_des_tv"/>
+    
+    <LinearLayout
+        android:id="@+id/ing_btn_ll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:weightSum="2"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_progress_layout">
+        <TextView
+            android:id="@+id/btn1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_6dp_btn"
+            android:backgroundTint="@color/brand_600"
+            android:text="측정하기"
+            android:gravity="center"
+            android:paddingVertical="8dp"
+            android:layout_weight="1"
+            android:textAppearance="@style/caption1_Semibold"
+            android:textColor="@color/white"/>
+
+        <TextView
+            android:id="@+id/btn2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_6dp_btn"
+            android:text="기존 정보 보기"
+            android:gravity="center"
+            android:paddingVertical="8dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:textAppearance="@style/caption1_Semibold"
+            android:textColor="@color/white"/>
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/ing_card_rv"
-        android:layout_width="320dp"
-        android:layout_height="340dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="34dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ing_progress_layout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_btn_ll"
         tools:listitem="@layout/item_ing_card"
         />
+
+    <FrameLayout
+        android:id="@+id/existing_info_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ing_btn_ll"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/loading_layout"
@@ -67,8 +117,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible">
+        app:layout_constraintTop_toTopOf="parent">
 
         <ProgressBar
             android:layout_width="wrap_content"

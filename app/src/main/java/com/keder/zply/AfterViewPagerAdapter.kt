@@ -5,7 +5,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 
 class AfterViewPagerAdapter(fragmentActivity : FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
-    override fun getItemCount(): Int = 4
+    override fun getItemCount(): Int = 5
 
     override fun createFragment(position: Int): Fragment {
         return when(position){
@@ -13,6 +13,7 @@ class AfterViewPagerAdapter(fragmentActivity : FragmentActivity) : FragmentState
             1 -> AfterDirectionFragment()
             2 -> AfterNoiseFragment()
             3 -> AfterLightFragment()
+            4 -> AfterSafetyFragment()
             else -> AfterLengthFragment()
         }
     }
