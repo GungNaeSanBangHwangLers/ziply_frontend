@@ -5,6 +5,7 @@ import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
@@ -147,5 +148,19 @@ interface AuthService {
     ): Response<Unit>
 
     @GET("/api/v1/analysis/safety/{searchCardId}")
-    suspend fun getAnalysisSafety(@Path("searchCardId") searchCardId: String): retrofit2.Response<List<SafetyResponse>>
+    suspend fun getAnalysisSafety(@Path("searchCardId") searchCardId: String): Response<List<SafetyResponse>>
+
+    @GET("/api/v1/review/card/{searchCardId}/details")
+    suspend fun getChecklistDetails(@Path("searchCardId") searchCardId: String): Response<List<ChecklistGroupResponse>>
+
+    @PATCH("api/v1/review/card/{houseId}")
+    suspend fun updateHouse(
+        @Path("houseId") houseId: Long,
+        @Body request: UpdateHouseRequest
+    ): Response<Unit>
+
+    @DELETE("api/v1/review/card/{houseId}")
+    suspend fun deleteHouse(
+        @Path("houseId") houseId: Long
+    ): Response<Unit>
 }

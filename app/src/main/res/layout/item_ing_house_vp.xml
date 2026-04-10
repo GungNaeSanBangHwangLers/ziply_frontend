@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingVertical="16dp"
+    android:paddingHorizontal="20dp"
+    android:background="@drawable/bg_14dp_btn">
+
+    <TextView
+        android:id="@+id/vp_rank_tv"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="@drawable/bg_rank_circle"
+        android:backgroundTint="@color/brand_100"
+        android:gravity="center"
+        android:text="A"
+        android:textAppearance="@style/caption1_Semibold"
+        android:textColor="@color/brand_800"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <TextView
+        android:id="@+id/vp_date_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:text="0000년 00월 00일 00시 00분 탐색"
+        android:textAppearance="@style/caption2_Regular"
+        android:textColor="@color/brand_100"
+        app:layout_constraintStart_toEndOf="@id/vp_rank_tv"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/vp_address_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="서울특별시 동동시\n동동로 50길 333-333"
+        android:textAppearance="@style/caption1_Semibold"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/vp_date_tv"
+        app:layout_constraintTop_toBottomOf="@id/vp_date_tv"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

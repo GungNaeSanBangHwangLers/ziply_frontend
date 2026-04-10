@@ -11,7 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.ItemExistingInfoCardBinding // XML 이름에 맞게 변경하세요
 
 class ExistingInfoCardAdapter(
-    private val items: List<ScheduleItem>
+    private val items: List<ScheduleItem>,
+    private val onImageClick: (ScheduleItem, Int) -> Unit
 ) : RecyclerView.Adapter<ExistingInfoCardAdapter.ViewHolder>() {
 
     inner class ViewHolder(val binding: ItemExistingInfoCardBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -36,7 +37,10 @@ class ExistingInfoCardAdapter(
                 binding.cardEmptyImgTv.visibility = View.GONE
 
                 binding.cardImgRv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-                binding.cardImgRv.adapter = IngImageAdapter(item.imageList)
+                binding.cardImgRv.adapter = IngImageAdapter(item.imageList) { clickedIndex ->
+                    // ★ 클릭된 아이템 정보와 몇 번째 사진인지(clickedIndex) 함께 전달
+                    onImageClick(item, clickedIndex)
+                }
             } else {
                 binding.cardImgRv.visibility = View.GONE
                 binding.cardEmptyImgTv.visibility = View.VISIBLE

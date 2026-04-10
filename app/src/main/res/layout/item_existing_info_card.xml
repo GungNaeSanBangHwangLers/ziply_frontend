@@ -48,7 +48,7 @@
     <TextView
         android:id="@+id/card_empty_img_tv"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="60dp"
         android:background="@drawable/gray_bg16"
         android:gravity="center"
         android:text="아직 측정 데이터가 없어요"
@@ -61,7 +61,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/card_img_rv"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="60dp"
         android:layout_marginTop="16dp"
         android:visibility="gone"
         android:orientation="horizontal"

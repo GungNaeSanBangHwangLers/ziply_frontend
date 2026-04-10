@@ -10,7 +10,8 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="40dp">
+        android:padding="20dp"
+        android:paddingBottom="20dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/existing_card_rv"
@@ -33,6 +34,7 @@
             android:paddingVertical="8dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/existing_card_rv" />
+
         <TextView
             android:id="@+id/tab_noise"
             android:layout_width="wrap_content"
@@ -41,18 +43,29 @@
             android:textColor="@color/gray_600"
             android:textAppearance="@style/body2_Semibold"
             android:paddingVertical="8dp"
-            android:layout_marginStart="24dp"
+            android:layout_marginStart="20dp"
             app:layout_constraintStart_toEndOf="@id/tab_distance"
             app:layout_constraintTop_toTopOf="@id/tab_distance" />
+
+        <TextView
+            android:id="@+id/tab_safety"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="안전"
+            android:textColor="@color/gray_600"
+            android:textAppearance="@style/body2_Semibold"
+            android:paddingVertical="8dp"
+            android:layout_marginStart="20dp"
+            app:layout_constraintStart_toEndOf="@id/tab_noise"
+            app:layout_constraintTop_toTopOf="@id/tab_distance" />
+
         <View
             android:id="@+id/tab_indicator"
             android:layout_width="1dp"
             android:layout_height="2dp"
             android:background="@color/brand_600"
             android:layout_marginTop="-2dp"
-
             app:layout_constraintStart_toStartOf="parent"
-
             app:layout_constraintTop_toBottomOf="@id/tab_distance" />
 
         <View
@@ -62,7 +75,6 @@
             android:background="@color/gray_600"
             app:layout_constraintTop_toBottomOf="@id/tab_indicator" />
 
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_content_distance"
             android:layout_width="match_parent"
@@ -70,7 +82,6 @@
             android:layout_marginTop="20dp"
             android:visibility="visible"
             app:layout_constraintTop_toBottomOf="@id/divider_line">
-
             <TextView
                 android:id="@+id/length_rank_tv"
                 android:layout_width="wrap_content"
@@ -80,7 +91,6 @@
                 android:textAppearance="@style/body1_Semibold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"/>
-
             <TextView
                 android:id="@+id/length_rank_des_tv"
                 android:layout_width="wrap_content"
@@ -91,7 +101,6 @@
                 android:textColor="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/length_rank_tv"/>
-
             <LinearLayout
                 android:id="@+id/layout_chips"
                 android:layout_width="match_parent"
@@ -105,7 +114,6 @@
                 app:layout_constraintTop_toBottomOf="@id/length_rank_des_tv"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
-
                 <TextView
                     android:id="@+id/chip_walk"
                     android:layout_width="0dp"
@@ -117,7 +125,6 @@
                     android:backgroundTint="@color/brand_600"
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
-
                 <TextView
                     android:id="@+id/chip_public"
                     android:layout_width="0dp"
@@ -129,7 +136,6 @@
                     android:text="대중교통"
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
-
                 <TextView
                     android:id="@+id/chip_car"
                     android:layout_width="0dp"
@@ -141,7 +147,6 @@
                     android:text="자동차"
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
-
                 <TextView
                     android:id="@+id/chip_bike"
                     android:layout_width="0dp"
@@ -154,7 +159,6 @@
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
             </LinearLayout>
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/length_rank_rv"
                 android:layout_width="match_parent"
@@ -165,7 +169,6 @@
                 app:layout_constraintTop_toBottomOf="@id/layout_chips"
                 tools:listitem="@layout/item_length_rank"
                 tools:itemCount="3"/>
-
             <TextView
                 android:id="@+id/tv_transport_info"
                 android:layout_width="match_parent"
@@ -182,7 +185,6 @@
                 tools:visibility="visible"/>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_content_noise"
             android:layout_width="match_parent"
@@ -190,7 +192,6 @@
             android:layout_marginTop="20dp"
             android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@id/divider_line">
-
             <TextView
                 android:id="@+id/noise_tv"
                 android:layout_width="wrap_content"
@@ -200,7 +201,6 @@
                 android:textColor="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"/>
-
             <TextView
                 android:id="@+id/noise_des_tv"
                 android:layout_width="wrap_content"
@@ -211,7 +211,6 @@
                 android:textColor="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/noise_tv"/>
-
             <LinearLayout
                 android:id="@+id/tab_day_night_container"
                 android:layout_width="match_parent"
@@ -223,7 +222,6 @@
                 android:padding="6dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/noise_des_tv">
-
                 <TextView
                     android:id="@+id/day_btn"
                     android:layout_width="0dp"
@@ -235,7 +233,6 @@
                     android:text="낮"
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
-
                 <TextView
                     android:id="@+id/night_btn"
                     android:layout_width="0dp"
@@ -249,7 +246,6 @@
                     android:textColor="@color/white"
                     android:textAppearance="@style/caption1_Semibold"/>
             </LinearLayout>
-
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/graph_container"
                 android:layout_width="match_parent"
@@ -258,7 +254,6 @@
                 android:paddingBottom="20dp"
                 android:background="@drawable/gray_bg16"
                 app:layout_constraintTop_toBottomOf="@id/tab_day_night_container">
-
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/graph_rv"
                     android:layout_width="wrap_content"
@@ -271,7 +266,6 @@
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"/>
-
                 <TextView
                     android:id="@+id/graph_detail_tv"
                     android:layout_width="match_parent"
@@ -285,7 +279,73 @@
                     android:visibility="gone"
                     app:layout_constraintTop_toBottomOf="@id/graph_rv"/>
             </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/layout_content_safety"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/divider_line">
+
+            <TextView
+                android:id="@+id/safety_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="안전 점수는 A가 \n가장 높아요."
+                android:textColor="@color/white"
+                android:textAppearance="@style/body1_Semibold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
+            <TextView
+                android:id="@+id/safety_des_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="학교에서 집 가는 길의 치안 인프라와 관련 뉴스를 기반으로\n알려드릴게요. 점수가 높을수록 좋아요."
+                android:textAppearance="@style/caption1_Median"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/safety_tv"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/safety_graph_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:paddingBottom="20dp"
+                android:background="@drawable/gray_bg16"
+                app:layout_constraintTop_toBottomOf="@id/safety_des_tv">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/safety_graph_rv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
+                    android:overScrollMode="never"
+                    app:layout_constrainedWidth="true"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:orientation="horizontal"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <TextView
+                    android:id="@+id/safety_graph_detail_tv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:padding="10dp"
+                    android:background="@drawable/gray_bg"
+                    android:text="그래프를 눌러 상세 정보를 확인하세요."
+                    android:textAppearance="@style/caption1_Median"
+                    android:textColor="@color/gray_300"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/safety_graph_rv"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <FrameLayout
@@ -298,7 +358,6 @@
             android:focusable="true"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
-
             <ProgressBar
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

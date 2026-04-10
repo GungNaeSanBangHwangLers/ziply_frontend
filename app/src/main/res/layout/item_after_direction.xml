@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:background="@drawable/gray_bg16"
     android:layout_width="276dp"
-    android:layout_height="366dp"
+    android:layout_height="wrap_content"
     android:padding="20dp"
     android:layout_marginRight="14dp">
 
@@ -57,6 +57,7 @@
         android:layout_height="84dp"
         android:background="@drawable/black_badge2"
         android:layout_marginTop="8dp"
+        android:padding="10dp"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/item_direction_des_tv">
@@ -70,8 +71,7 @@
             android:text="이런 점이 좋아요"
             android:textAppearance="@style/caption2_Semibold"
             android:textColor="@color/brand_800"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="10dp"/>
+            />
 
         <TextView
             android:id="@+id/item_good_des_tv"
@@ -79,8 +79,6 @@
             android:layout_height="wrap_content"
             android:textAppearance="@style/caption1_Median"
             android:text="겨울에는 따뜻하고 여름에는 시원해서 냉난방비를 줄일 수 있어요."
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
             android:layout_marginTop="8dp"/>
     </LinearLayout>
 
@@ -91,6 +89,7 @@
         android:background="@drawable/black_badge2"
         android:layout_marginTop="8dp"
         android:orientation="vertical"
+        android:padding="10dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/item_good_ll">
 
@@ -102,9 +101,7 @@
             android:background="@drawable/bad_badge"
             android:text="이런 점은 불편해요"
             android:textAppearance="@style/caption2_Semibold"
-            android:textColor="@color/error_800"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="10dp"/>
+            android:textColor="@color/error_800" />
 
         <TextView
             android:id="@+id/item_bad_des_tv"
@@ -112,8 +109,6 @@
             android:layout_height="wrap_content"
             android:textAppearance="@style/caption1_Median"
             android:text="보통 월세 가격이 비싸고, 매물이 적을 수 있어요. 햇빛 때문에 가구 변색이 있을 수 있어요."
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
             android:layout_marginTop="8dp"/>
     </LinearLayout>
 

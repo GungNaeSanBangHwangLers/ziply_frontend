@@ -29,4 +29,7 @@ class TokenManager(context: Context) {
     fun getRefreshToken():String?{
         return prefs.getString("REFRESH_TOKEN", null)
     }
+    fun clearTokens() {
+        prefs.edit().clear().apply()
+    }
 }
