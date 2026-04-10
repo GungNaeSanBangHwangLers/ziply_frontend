@@ -2,8 +2,8 @@ package com.keder.zply
 
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.hardware.Sensor
@@ -12,90 +12,194 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
-import android.widget.Toast
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.keder.zply.databinding.ActivityIngExploreBinding
-import kotlinx.coroutines.delay
+import com.keder.zply.databinding.ItemIngHouseVpBinding
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class IngExploreActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityIngExploreBinding
     private var currentScheduleList: MutableList<ScheduleItem> = mutableListOf()
-    private lateinit var adapter: IngCardAdapter
     private var cardId: String = ""
+
+    private var currentHouseIndex: Int = -1
+    private lateinit var photoAdapter: IngImageAdapter
 
     private lateinit var sensorManager: SensorManager
     private var lightSensor: Sensor? = null
+    private var lightSensorListener: SensorEventListener? = null
 
-    private var currentPhotoPosition: Int = -1
-    private var tempImageUri: Uri? = null
     private var currentPhotoPath: String = ""
 
-    private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess: Boolean ->
-        if (isSuccess && currentPhotoPosition != -1 && currentPhotoPath.isNotEmpty()) {
-            Log.d("API_PHOTO", "📸 카메라 촬영 성공! 실제 파일 경로: $currentPhotoPath")
+    private var isNavigatingBack = false
+
+    private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess ->
+        if (isSuccess && currentPhotoPath.isNotEmpty()) {
             val file = File(currentPhotoPath)
-            uploadPhotoToServer(currentPhotoPosition, file)
+            if (file.exists() && file.length() > 0) {
+                uploadPhotoToServer(currentHouseIndex, file)
+            } else {
+                showCustomToast("사진 저장에 실패했습니다. 다시 촬영해주세요.")
+            }
         } else {
-            Log.e("API_PHOTO", "❌ 카메라 촬영 취소 또는 실패. isSuccess: $isSuccess")
             showCustomToast("사진 촬영이 취소되었습니다.")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityIngExploreBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
-        cardId = intent.getStringExtra("CARD_ID") ?: ""
-        if (cardId.isEmpty()) { finish(); return }
-
-        binding.ingBackIv.setOnClickListener { finish() }
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
-
-        if (savedInstanceState == null) {
-            val existingInfoFragment = ExistingInfoFragment.newInstance(cardId)
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.existing_info_container, existingInfoFragment)
-                .commit()
+        if (savedInstanceState != null) {
+            currentPhotoPath = savedInstanceState.getString("SAVED_PHOTO_PATH", "") ?: ""
         }
 
-        setupTabButtons()
-        loadDataSafe()
+        try {
+            binding = ActivityIngExploreBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+
+            cardId = intent.extras?.get("CARD_ID")?.toString() ?: ""
+
+            if (cardId.isEmpty()) {
+                showCustomToast("카드 정보를 찾을 수 없습니다.")
+                finish()
+                return
+            }
+
+            // 1. 화면 내 뒤로 가기 화살표 클릭
+            binding.ingBackIv.setOnClickListener {
+                goBackToMain()
+            }
+
+            // 2. 휴대폰 자체 뒤로 가기 버튼 클릭
+            onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    goBackToMain()
+                }
+            })
+
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+
+            setupTabButtons()
+
+            photoAdapter = IngImageAdapter(mutableListOf()) {}
+            binding.photoRv.adapter = photoAdapter
+
+            binding.step2Btn.setOnClickListener {
+                if (currentHouseIndex in 0 until currentScheduleList.size) {
+                    showDirectionInfoDialog(currentScheduleList[currentHouseIndex].houseId)
+                }
+            }
+
+            binding.step3Btn.setOnClickListener {
+                if (currentHouseIndex in 0 until currentScheduleList.size) {
+                    if (currentScheduleList[currentHouseIndex].imageList.size >= 7) {
+                        showCustomToast("사진은 최대 7장까지만 등록 가능해요.")
+                    } else {
+                        try {
+                            val photoFile: File = createImageFile()
+                            val photoURI: Uri = FileProvider.getUriForFile(
+                                this,
+                                "${packageName}.fileprovider",
+                                photoFile
+                            )
+                            takePhotoLauncher.launch(photoURI)
+                        } catch (ex: Exception) {
+                            Log.e("ZplyError", "카메라 실행 오류", ex)
+                            showCustomToast("카메라를 실행할 수 없습니다.")
+                        }
+                    }
+                }
+            }
+
+            if (savedInstanceState == null) {
+                try {
+                    val existingInfoFragment = ExistingInfoFragment.newInstance(cardId)
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.existing_info_container, existingInfoFragment, "EXISTING_INFO")
+                        .commit()
+                } catch (e: Exception) {
+                    Log.e("z_error", "Fragment 에러", e)
+                }
+            }
+
+            loadDataSafe()
+
+        } catch (e: Exception) {
+            Log.e("z_error", "onCreate 에러", e)
+            showCustomToast("화면을 불러오는 중 문제가 발생했습니다.")
+        }
+    }
+
+    // ==============================================================
+    // ★ [안전장치 적용] 한 번 실행되면 두 번 다시 실행되지 않는 철벽 탈출 함수
+    // ==============================================================
+    private fun goBackToMain() {
+        if (isNavigatingBack) return // 이미 뒤로 가기를 누른 상태면 무시!
+        isNavigatingBack = true      // 자물쇠 채우기
+
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+        finish()
+    }
+
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.KOREA).format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
+        ).apply {
+            currentPhotoPath = absolutePath
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("SAVED_PHOTO_PATH", currentPhotoPath)
     }
 
     private fun setupTabButtons() {
-        val btnMeasure = binding.btn1
-        val btnInfo = binding.btn2
         val selectedColor = ContextCompat.getColor(this, R.color.brand_600)
         val unselectedColor = Color.TRANSPARENT
 
-        btnMeasure.setOnClickListener {
-            btnMeasure.backgroundTintList = ColorStateList.valueOf(selectedColor)
-            btnInfo.backgroundTintList = ColorStateList.valueOf(unselectedColor)
-            binding.ingCardRv.visibility = View.VISIBLE
+        binding.btn1.setOnClickListener {
+            binding.btn1.backgroundTintList = ColorStateList.valueOf(selectedColor)
+            binding.btn2.backgroundTintList = ColorStateList.valueOf(unselectedColor)
+            binding.measureScrollView.visibility = View.VISIBLE
             binding.existingInfoContainer.visibility = View.GONE
         }
-        btnInfo.setOnClickListener {
-            btnInfo.backgroundTintList = ColorStateList.valueOf(selectedColor)
-            btnMeasure.backgroundTintList = ColorStateList.valueOf(unselectedColor)
-            binding.ingCardRv.visibility = View.GONE
+        binding.btn2.setOnClickListener {
+            binding.btn2.backgroundTintList = ColorStateList.valueOf(selectedColor)
+            binding.btn1.backgroundTintList = ColorStateList.valueOf(unselectedColor)
+            binding.measureScrollView.visibility = View.GONE
             binding.existingInfoContainer.visibility = View.VISIBLE
         }
     }
@@ -103,24 +207,16 @@ class IngExploreActivity : AppCompatActivity() {
     private fun loadDataSafe() {
         lifecycleScope.launch {
             binding.loadingLayout.visibility = View.VISIBLE
-            val service = RetrofitClient.getInstance(this@IngExploreActivity)
-            val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
-
             try {
+                val service = RetrofitClient.getInstance(this@IngExploreActivity)
+                val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
                 val houses = try { service.getCardHouseList(cardId).body() ?: emptyList() } catch (e: Exception) { emptyList() }
 
-                val addressRes = try { service.getCardAddresses(cardId).body() } catch (e: Exception) { null }
-                if (!addressRes.isNullOrEmpty()) {
-                    binding.ingMyAddressTv.text = addressRes[0].address ?: "주소 없음"
-                }
-
-                val sortedHouses = houses.sortedBy { it.visitTime ?: "" }
                 val detailList = mutableListOf<ScheduleItem>()
-
-                for (house in sortedHouses) {
+                for (house in houses.sortedBy { it.visitTime ?: "" }) {
                     var displayLight = -1f
                     var measuredRooms = 0
-                    val serverImageUrls = mutableListOf<String>()
+                    val serverImages = mutableListOf<String>()
 
                     try {
                         val detailRes = service.getHouseCardDetail(house.houseId).body()
@@ -128,12 +224,8 @@ class IngExploreActivity : AppCompatActivity() {
                             val cards = detailRes.measurementCards ?: emptyList()
                             measuredRooms = cards.count { it.isDirectionDone }
                             val validLights = cards.filter { it.isLightDone && it.lightLevel != null }
-                            if (validLights.isNotEmpty()) {
-                                displayLight = validLights.map { it.lightLevel!! }.average().toFloat()
-                            }
-                            if (!detailRes.imageUrls.isNullOrEmpty()) {
-                                serverImageUrls.addAll(detailRes.imageUrls)
-                            }
+                            if (validLights.isNotEmpty()) displayLight = validLights.map { it.lightLevel!! }.average().toFloat()
+                            if (!detailRes.imageUrls.isNullOrEmpty()) serverImages.addAll(detailRes.imageUrls)
                         }
                     } catch (e: Exception) {}
 
@@ -145,95 +237,119 @@ class IngExploreActivity : AppCompatActivity() {
                     if (savedRoomCount >= 0) measuredRooms = savedRoomCount
                     if (savedLux >= 0f) displayLight = savedLux
 
-                    val combinedImages = (serverImageUrls + localPhotos).distinct().toMutableList()
-
                     detailList.add(ScheduleItem(
                         houseId = house.houseId,
                         address = house.address ?: "",
-                        time = house.visitTime ?: "",
+                        time = house.visitTime?.replace("T", " ")?.take(16) ?: "",
                         rankLabel = house.label ?: "?",
                         measuredLightLux = displayLight,
                         measuredRoomCount = measuredRooms,
-                        imageList = combinedImages
+                        imageList = (serverImages + localPhotos).distinct().toMutableList()
                     ))
                 }
 
                 currentScheduleList = detailList.sortedBy { it.rankLabel }.toMutableList()
-                setupRecyclerView()
+                setupViewPager()
 
             } catch (e: Exception) {
-                Log.e("IngExplore", "화면 로드 실패", e)
+                showCustomToast("데이터를 불러오는데 실패했습니다.")
             } finally {
                 binding.loadingLayout.visibility = View.GONE
             }
         }
     }
 
-    private fun setupRecyclerView() {
-        adapter = IngCardAdapter(
-            items = currentScheduleList,
-            onLightClick = { position, item -> showLightAlertDialog(position) },
-            onDirectionClick = { position, item -> showDirectionInfoDialog(position, item.houseId) },
-            onPhotoClick = { position, item ->
-                currentPhotoPosition = position
-
-                val tempFile = File(cacheDir, "zply_photo_${System.currentTimeMillis()}.jpg")
-                currentPhotoPath = tempFile.absolutePath
-
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    this@IngExploreActivity,
-                    "${packageName}.fileprovider",
-                    tempFile
-                )
-
-                tempImageUri = uri
-                takePhotoLauncher.launch(uri)
+    private fun setupViewPager() {
+        try {
+            val vpAdapter = HousePagerAdapter(currentScheduleList)
+            binding.houseVp.adapter = vpAdapter
+            if (currentScheduleList.isNotEmpty()) {
+                binding.houseVp.offscreenPageLimit = 3
             }
-        )
-        binding.ingCardRv.adapter = adapter
-        binding.ingCardRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+
+            binding.houseVp.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    super.onPageSelected(position)
+                    try {
+                        stopAutoLightMeasurement()
+                        currentHouseIndex = position
+                        updateStepsUI(position)
+                    } catch (e: Exception) {}
+                }
+            })
+        } catch (e: Exception) {}
     }
 
+    private fun updateStepsUI(position: Int) {
+        if (position < 0 || position >= currentScheduleList.size) return
+        val item = currentScheduleList[position]
 
-    private fun showLightAlertDialog(position: Int) {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.ing_alert)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.findViewById<Button>(R.id.alert_cancel_btn).setOnClickListener { dialog.dismiss() }
-        dialog.findViewById<Button>(R.id.alert_ok_btn).setOnClickListener {
-            dialog.dismiss()
-            measureLightRealtime(position)
+        if (item.measuredLightLux >= 0f) {
+            setStepStyleSafe(binding.step1Num, binding.step1Title, binding.step1Desc, binding.step1Btn, true, "측정완료")
+        } else {
+            setStepStyleSafe(binding.step1Num, binding.step1Title, binding.step1Desc, binding.step1Btn, false, "측정중...")
+            startAutoLightMeasurement(position)
         }
-        dialog.show()
+
+        if (item.measuredRoomCount > 0) {
+            setStepStyleSafe(binding.step2Num, binding.step2Title, binding.step2Desc, binding.step2Btn, true, "측정완료")
+        } else {
+            setStepStyleSafe(binding.step2Num, binding.step2Title, binding.step2Desc, binding.step2Btn, false, "측정하기")
+        }
+
+        photoAdapter.updateImages(item.imageList)
+        if (item.imageList.size >= 7) {
+            setStepStyleSafe(binding.step3Num, binding.step3Title, binding.step3Desc, binding.step3Btn, true, "촬영완료")
+        } else {
+            setStepStyleSafe(binding.step3Num, binding.step3Title, binding.step3Desc, binding.step3Btn, false, "촬영하기")
+        }
     }
 
-    private fun measureLightRealtime(position: Int) {
+    private fun setStepStyleSafe(numTv: TextView?, titleTv: TextView?, descTv: TextView?, btn: TextView?, isCompleted: Boolean, btnText: String) {
+        if (numTv == null || titleTv == null || descTv == null || btn == null) return
+        try {
+            val context = this
+            if (isCompleted) {
+                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.gray_500))
+                titleTv.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
+                descTv.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
+                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.gray_700))
+                btn.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
+                btn.isEnabled = false
+            } else {
+                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.white))
+                titleTv.setTextColor(ContextCompat.getColor(context, R.color.white))
+                descTv.setTextColor(ContextCompat.getColor(context, R.color.white))
+                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.brand_700))
+                btn.setTextColor(ContextCompat.getColor(context, R.color.white))
+                btn.isEnabled = true
+            }
+            btn.text = btnText
+        } catch (e: Exception) {}
+    }
+
+    private fun startAutoLightMeasurement(position: Int) {
         if (lightSensor == null) {
-            showCustomToast("조도 센서를 지원하지 않는 기기입니다.")
+            binding.step1Btn.text = "센서 없음"
             return
         }
-        binding.loadingLayout.visibility = View.VISIBLE
-
-        val listener = object : SensorEventListener {
+        lightSensorListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
                     val lux = event.values[0]
-                    sensorManager.unregisterListener(this)
+                    stopAutoLightMeasurement()
                     sendLightDataToServer(position, lux)
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
-        sensorManager.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(lightSensorListener, lightSensor, SensorManager.SENSOR_DELAY_UI)
+    }
 
-        lifecycleScope.launch {
-            delay(2000)
-            sensorManager.unregisterListener(listener)
-            if (binding.loadingLayout.visibility == View.VISIBLE) {
-                binding.loadingLayout.visibility = View.GONE
-                showCustomToast("측정에 실패했습니다.")
-            }
+    private fun stopAutoLightMeasurement() {
+        lightSensorListener?.let {
+            sensorManager.unregisterListener(it)
+            lightSensorListener = null
         }
     }
 
@@ -242,82 +358,34 @@ class IngExploreActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val service = RetrofitClient.getInstance(this@IngExploreActivity)
-
-                // ★ 수정됨: 새로 바뀐 채광 API DTO 규격에 맞춰 전송! (Double 타입의 List로 보냄)
-                val request = LightRequest(
-                    round = 1,
-                    lightLevels = listOf(lux.toDouble())
-                )
-
-                val response = service.saveLight(houseId, request) // ★ 함수명 주의: saveLight
-
+                val response = service.saveLight(houseId, LightRequest(1, listOf(lux.toDouble())))
                 if (response.isSuccessful) {
                     val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
                     prefs.edit().putFloat("lux_${houseId}", lux).apply()
-
                     currentScheduleList[position].measuredLightLux = lux
-                    adapter.notifyItemChanged(position)
+                    if (currentHouseIndex == position) updateStepsUI(position)
 
-                    val fragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
-                    fragment?.updateMeasurementLocal(houseId, lightLux = lux)
+                    val existingInfoFragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
+                    existingInfoFragment?.updateMeasurementLocal(houseId = houseId, lightLux = lux)
 
-                    showCustomToast2("측정을 완료했어요")
+                    showCustomToast2("채광 측정을 완료했어요")
                 } else {
-                    Log.e("API_LIGHT", "❌ 채광 전송 실패. 코드: ${response.code()}")
-                    showCustomToast("등록에 실패했어요.")
+                    handleLightFail(position)
                 }
             } catch (e: Exception) {
-                Log.e("API_LIGHT", "❌ 채광 전송 에러", e)
-                showCustomToast("등록에 실패했어요.")
-            }
-            finally { binding.loadingLayout.visibility = View.GONE }
-        }
-    }
-
-    private fun uploadPhotoToServer(position: Int, file: File) {
-        binding.loadingLayout.visibility = View.VISIBLE
-        val houseId = currentScheduleList[position].houseId
-
-        Log.d("API_PHOTO", "📸 [사진 업로드 시도] HouseID: $houseId, 파일 경로: ${file.absolutePath}")
-
-        lifecycleScope.launch {
-            try {
-                val service = RetrofitClient.getInstance(this@IngExploreActivity)
-                val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                val imagePart = MultipartBody.Part.createFormData("images", file.name, requestFile)
-
-                val response = service.uploadHouseImages(houseId, listOf(imagePart))
-
-                if (response.isSuccessful) {
-                    Log.d("API_PHOTO", "✅ [사진 업로드 성공] HTTP 200")
-                    val absolutePath = file.absolutePath
-
-                    val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
-                    val existingPhotos = prefs.getString("photos_${houseId}", "") ?: ""
-                    val newPhotos = if (existingPhotos.isEmpty()) absolutePath else "$existingPhotos,$absolutePath"
-                    prefs.edit().putString("photos_${houseId}", newPhotos).apply()
-
-                    currentScheduleList[position].imageList.add(absolutePath)
-                    adapter.notifyItemChanged(position)
-
-                    val fragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
-                    fragment?.updateMeasurementLocal(houseId, newImagePath = absolutePath)
-
-                    showCustomToast2("사진이 추가되었습니다.")
-                } else {
-                    Log.e("API_PHOTO", "❌ [사진 업로드 실패] Code: ${response.code()}, Error: ${response.errorBody()?.string()}")
-                    showCustomToast("사진 등록에 실패했어요.")
-                }
-            } catch (e: Exception) {
-                Log.e("API_PHOTO", "❌ [사진 업로드 예외 발생]: ${e.message}", e)
-                showCustomToast("네트워크 오류가 발생했습니다.")
-            } finally {
-                binding.loadingLayout.visibility = View.GONE
+                handleLightFail(position)
             }
         }
     }
 
-    private fun showDirectionInfoDialog(position: Int, houseId: Long) {
+    private fun handleLightFail(position: Int) {
+        if (currentHouseIndex == position) {
+            binding.step1Btn.text = "측정 실패"
+            binding.step1Btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_600))
+        }
+    }
+
+    private fun showDirectionInfoDialog(houseId: Long) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.ing_info_dialog)
@@ -328,20 +396,135 @@ class IngExploreActivity : AppCompatActivity() {
             val bottomSheet = IngBottomSheetFragment.newInstance(houseId)
             bottomSheet.onComplete = { roomCount ->
                 if (roomCount > 0) {
-                    currentScheduleList[position].measuredRoomCount = roomCount
-                    adapter.notifyItemChanged(position)
+                    currentScheduleList[currentHouseIndex].measuredRoomCount = roomCount
+                    updateStepsUI(currentHouseIndex)
 
-                    val fragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
-                    fragment?.updateMeasurementLocal(houseId, roomCount = roomCount)
+                    val existingInfoFragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
+                    existingInfoFragment?.updateMeasurementLocal(houseId = houseId, roomCount = roomCount)
+
+                    showCustomToast2("방향 측정을 완료했어요")
                 }
             }
             bottomSheet.show(supportFragmentManager, "IngBottomSheetFragment")
         }
         dialog.show()
     }
-    private fun saveBitmapToTempFile(bitmap: Bitmap): String {
-        val file = File(cacheDir, "photo_${System.currentTimeMillis()}.jpg")
-        FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out) }
-        return Uri.fromFile(file).toString()
+
+    private fun uploadPhotoToServer(position: Int, file: File) {
+        if (!file.exists() || file.length() == 0L) {
+            showCustomToast("사진 파일이 유효하지 않습니다.")
+            return
+        }
+
+        binding.loadingLayout.visibility = View.VISIBLE
+        val houseId = currentScheduleList[position].houseId
+
+        lifecycleScope.launch {
+            var tempCompressedFile: File? = null
+            try {
+                tempCompressedFile = getCompressedImageFile(file)
+                val service = RetrofitClient.getInstance(this@IngExploreActivity)
+                val requestFile = tempCompressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                val imagePart = MultipartBody.Part.createFormData("images", tempCompressedFile.name, requestFile)
+                val response = service.uploadHouseImages(houseId, listOf(imagePart))
+
+                if (response.isSuccessful) {
+                    val absolutePath = file.absolutePath
+                    val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
+                    val existingPhotos = prefs.getString("photos_${houseId}", "") ?: ""
+                    prefs.edit().putString("photos_${houseId}", if (existingPhotos.isEmpty()) absolutePath else "$existingPhotos,$absolutePath").apply()
+
+                    currentScheduleList[position].imageList.add(absolutePath)
+                    if (currentHouseIndex == position) updateStepsUI(position)
+
+                    val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
+                        ?: supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
+
+                    existingInfoFragment?.updateMeasurementLocal(houseId = houseId, newImagePath = absolutePath)
+
+                    showCustomToast2("사진이 추가되었습니다.")
+                } else {
+                    showCustomToast("사진 등록에 실패했어요. (에러: ${response.code()})")
+                }
+            } catch (e: Exception) {
+                showCustomToast("네트워크 오류가 발생했습니다.")
+            } finally {
+                tempCompressedFile?.delete()
+                binding.loadingLayout.visibility = View.GONE
+            }
+        }
     }
+
+    private fun getCompressedImageFile(file: File): File {
+        val options = android.graphics.BitmapFactory.Options()
+        options.inJustDecodeBounds = true
+        android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
+
+        val maxSide = 1280
+        var inSampleSize = 1
+        if (options.outHeight > maxSide || options.outWidth > maxSide) {
+            val halfHeight = options.outHeight / 2
+            val halfWidth = options.outWidth / 2
+            while (halfHeight / inSampleSize >= maxSide && halfWidth / inSampleSize >= maxSide) {
+                inSampleSize *= 2
+            }
+        }
+
+        options.inJustDecodeBounds = false
+        options.inSampleSize = inSampleSize
+        val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
+
+        val compressedFile = File(cacheDir, "temp_up_${System.currentTimeMillis()}.jpg")
+        val out = java.io.FileOutputStream(compressedFile)
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+        out.flush()
+        out.close()
+        bitmap.recycle()
+
+        return compressedFile
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopAutoLightMeasurement()
+    }
+}
+
+class HousePagerAdapter(private val items: List<ScheduleItem>) : RecyclerView.Adapter<HousePagerAdapter.ViewHolder>() {
+    inner class ViewHolder(val binding: ItemIngHouseVpBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: ScheduleItem) {
+            binding.vpRankTv.text = item.rankLabel
+            binding.vpDateTv.text = "${item.time} 탐색"
+            binding.vpAddressTv.text = item.address
+
+            val context = binding.root.context
+            val brand100 = ContextCompat.getColor(context, R.color.brand_100)
+            val brand800 = ContextCompat.getColor(context, R.color.brand_800)
+            val brand400 = ContextCompat.getColor(context, R.color.brand_400)
+            val white = ContextCompat.getColor(context, R.color.white)
+            val brand700 = ContextCompat.getColor(context, R.color.brand_700)
+            val brand950 = ContextCompat.getColor(context, R.color.brand_950)
+            val black = ContextCompat.getColor(context, R.color.black)
+            val gray400 = ContextCompat.getColor(context, R.color.gray_400)
+            val gray700 = ContextCompat.getColor(context, R.color.gray_700)
+            val gray200 = ContextCompat.getColor(context, R.color.gray_200)
+
+            val rankChar = if (item.rankLabel.isNotEmpty()) item.rankLabel[0] else '?'
+            when (rankChar) {
+                'A' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand100); binding.vpRankTv.setTextColor(brand800) }
+                'B' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand400); binding.vpRankTv.setTextColor(white) }
+                'C' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand700); binding.vpRankTv.setTextColor(white) }
+                'D' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand950); binding.vpRankTv.setTextColor(white) }
+                'E' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(white); binding.vpRankTv.setTextColor(black) }
+                'F' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray400); binding.vpRankTv.setTextColor(white) }
+                'G' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray700); binding.vpRankTv.setTextColor(white) }
+                else -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray200); binding.vpRankTv.setTextColor(black) }
+            }
+        }
+    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        return ViewHolder(ItemIngHouseVpBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+    }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(items[position])
+    override fun getItemCount(): Int = items.size
 }

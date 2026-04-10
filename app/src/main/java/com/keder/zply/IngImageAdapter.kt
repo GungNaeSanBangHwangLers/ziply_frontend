@@ -7,7 +7,13 @@ import com.bumptech.glide.Glide // ★ 필수 임포트
 import com.keder.zply.databinding.ItemIngImageBinding
 import java.io.File
 
-class IngImageAdapter(private val images: List<String>) : RecyclerView.Adapter<IngImageAdapter.ViewHolder>() {
+class IngImageAdapter(private var images: List<String>,
+                      private val onImageClick: (Int) -> Unit) : RecyclerView.Adapter<IngImageAdapter.ViewHolder>() {
+
+    fun updateImages(newImages: List<String>) {
+        this.images = newImages
+        notifyDataSetChanged()
+    }
 
     inner class ViewHolder(val binding: ItemIngImageBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(imagePath: String) {
@@ -19,8 +25,13 @@ class IngImageAdapter(private val images: List<String>) : RecyclerView.Adapter<I
                 .load(imageModel)
                 .centerCrop()
                 .into(binding.itemImgIv)
+
+            binding.root.setOnClickListener {
+                onImageClick(bindingAdapterPosition)
+            }
         }
     }
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemIngImageBinding.inflate(LayoutInflater.from(parent.context), parent, false)

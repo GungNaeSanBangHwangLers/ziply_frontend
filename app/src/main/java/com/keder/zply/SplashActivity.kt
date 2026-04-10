@@ -13,7 +13,7 @@ class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 스플래시 화면 레이아웃 (로고 등)이 있다면 설정
-        // setContentView(R.layout.activity_splash)
+        setContentView(R.layout.activity_splash)
 
         val draftPref = getSharedPreferences("schedule_draft_pref", Context.MODE_PRIVATE) // DRAFT_PREF 이름 일치시켜야 함
         draftPref.edit().clear().apply()

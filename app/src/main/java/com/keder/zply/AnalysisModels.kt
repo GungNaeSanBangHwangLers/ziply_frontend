@@ -320,3 +320,21 @@ data class SafetyResponse(
     val cctvCount: Int,
     val message: String?
 )
+
+data class ChecklistGroupResponse(
+    val date: String,
+    val isAllCompleted: Boolean,
+    val houses: List<ChecklistHouseResponse>
+)
+
+data class ChecklistHouseResponse(
+    val id: Long, // 스웨거 기준 id
+    val visitDateTime: String?, // ★ 핵심: time이 아니라 visitDateTime 입니다!
+    val address: String?,
+    val isMeasurementCompleted: Boolean
+)
+
+data class UpdateHouseRequest(
+    val address: String,
+    val visitDateTime: String
+)

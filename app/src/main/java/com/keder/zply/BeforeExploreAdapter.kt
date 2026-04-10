@@ -10,7 +10,11 @@ import com.keder.zply.databinding.ItemExploreBinding
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class BeforeExploreAdapter(private val items : List<ScheduleItem>) : RecyclerView.Adapter<BeforeExploreAdapter.ViewHolder>() {
+// ★ 클릭 콜백 함수 파라미터 추가
+class BeforeExploreAdapter(
+    private val items: List<ScheduleItem>,
+    private val onEditClick: (ScheduleItem) -> Unit
+) : RecyclerView.Adapter<BeforeExploreAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExploreBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -27,10 +31,8 @@ class BeforeExploreAdapter(private val items : List<ScheduleItem>) : RecyclerVie
         val binding: ItemExploreBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        private val inputFormatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        private val outputFormatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        private val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+        private val outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
         fun bind(item: ScheduleItem) {
 
@@ -42,18 +44,11 @@ class BeforeExploreAdapter(private val items : List<ScheduleItem>) : RecyclerVie
 
             binding.exploreAddress.text = item.address
 
-            // 시간 변환
-            val formattedTime = try {
-                val dateTime = LocalDateTime.parse(item.time, inputFormatter)
-                dateTime.format(outputFormatter)
-            } catch (e: Exception) {
-                item.time // 파싱 실패 시 원본 표시
-            }
+            binding.exploreDateTv.text = "${item.time} 탐색"
 
-            binding.exploreDateTv.text = "$formattedTime 탐색"
-
+            // ★ 연필 아이콘 클릭 시 수정 바텀시트 열기
             binding.exploreWriteIv.setOnClickListener {
-                // 수정 아이콘 클릭 이벤트
+                onEditClick(item)
             }
         }
     }
@@ -72,7 +67,6 @@ class BeforeExploreAdapter(private val items : List<ScheduleItem>) : RecyclerVie
         val gray700 = ContextCompat.getColor(context, R.color.gray_700)
         val gray200 = ContextCompat.getColor(context, R.color.gray_200)
 
-        // backgroundTintList 사용 권장
         when(rank){
             'A' -> { textView.backgroundTintList = ColorStateList.valueOf(brand100); textView.setTextColor(brand800) }
             'B' -> { textView.backgroundTintList = ColorStateList.valueOf(brand400); textView.setTextColor(white) }

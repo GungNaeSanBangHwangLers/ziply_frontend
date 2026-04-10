@@ -141,25 +141,104 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/map_accordion_container">
 
-        <TextView
-            android:id="@+id/tab_distance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="직주거리"
-            android:textColor="@color/brand_500"
-            android:textAppearance="@style/body2_Semibold" />
+            <TextView
+                android:id="@+id/tab_distance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="직주거리"
+                android:textColor="@color/brand_700"
+                android:textAppearance="@style/body2_Semibold" />
 
-        <TextView
-            android:id="@+id/tab_noise"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="소음"
-            android:layout_marginStart="20dp"
-            android:textAppearance="@style/body2_Semibold"
-            android:textColor="@color/gray_600"
-            />
-    </LinearLayout>
+            <TextView
+                android:id="@+id/tab_noise"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="소음"
+                android:paddingVertical="8dp"
+                android:layout_marginStart="20dp"
+                android:textAppearance="@style/body2_Semibold"
+                android:textColor="@color/gray_500" />
 
+            <TextView
+                android:id="@+id/tab_safety"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="안전"
+                android:paddingVertical="8dp"
+                android:layout_marginStart="20dp"
+                android:textAppearance="@style/body2_Semibold"
+                android:textColor="@color/gray_500" />
+        </LinearLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/layout_content_safety"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="50dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/tab_indicator"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <TextView
+                android:id="@+id/before_safety_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="안전 점수는 A가 \n가장 높아요."
+                android:textColor="@color/white"
+                android:textAppearance="@style/body1_Semibold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
+            <TextView
+                android:id="@+id/before_safety_des_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="학교에서 집 가는 길의 치안 인프라와 관련 뉴스를 기반으로\n알려드릴게요. 점수가 높을수록 좋아요."
+                android:textAppearance="@style/caption1_Median"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/before_safety_tv"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/before_safety_graph_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:paddingBottom="20dp"
+                android:background="@drawable/gray_bg16"
+                app:layout_constraintTop_toBottomOf="@id/before_safety_des_tv">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/before_safety_graph_rv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
+                    android:overScrollMode="never"
+                    app:layout_constrainedWidth="true"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:orientation="horizontal"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <TextView
+                    android:id="@+id/before_safety_graph_detail_tv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="16dp"
+                    android:padding="10dp"
+                    android:background="@drawable/gray_bg"
+                    android:text="그래프를 눌러 상세 정보를 확인하세요."
+                    android:textAppearance="@style/caption1_Median"
+                    android:textColor="@color/white"
+                    android:visibility="gone"
+                    app:layout_constraintTop_toBottomOf="@id/before_safety_graph_rv"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
     <View
         android:id="@+id/tab_indicator"
         android:layout_width="50dp"
@@ -291,14 +370,12 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:background="@drawable/stroke_gray800"
-            android:padding="10dp"
             android:text="교통 정보 설명"
             android:textAppearance="@style/caption2_Median"
             android:textColor="@color/white"
             android:lineSpacingExtra="4dp"
             android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/before_length_rank_rv"
-            tools:visibility="visible"/>
+            app:layout_constraintTop_toBottomOf="@id/before_length_rank_rv" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout

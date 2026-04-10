@@ -8,20 +8,20 @@ import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.keder.zply.databinding.ActivityBeforeExploreBinding
 import com.naver.maps.geometry.LatLng
 import com.naver.maps.geometry.LatLngBounds
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.MapFragment
 import com.naver.maps.map.NaverMap
-import com.naver.maps.map.NaverMapSdk
 import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -31,10 +31,11 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mainListAdapter: BeforeExploreAdapter
     private lateinit var lengthAdapter: LengthRankAdapter
     private lateinit var graphAdapter: GraphAdapter
+    private lateinit var safetyGraphAdapter: GraphAdapter
 
     private var currentCardId: String = ""
     private var isMapExpanded = false
-    private var isDistanceTabSelected = true
+    private var currentTabIdx = 0
     private var isDayMode = true
 
     private var originalScheduleList: List<ScheduleItem> = emptyList()
@@ -45,18 +46,10 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
     private val markerList = mutableListOf<Marker>()
     private var mapInfoList: List<MapInfoResponse> = emptyList()
 
+    private var isNavigatingBack = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            val appInfo = packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
-            val clientId = appInfo.metaData?.getString("com.naver.maps.map.CLIENT_ID")
-            Log.e("MAP_DEBUG_TEST", "=======================================")
-            Log.e("MAP_DEBUG_TEST", "1. 실제 구동 중인 패키지명: $packageName")
-            Log.e("MAP_DEBUG_TEST", "2. 매니페스트에 박힌 ID: $clientId")
-            Log.e("MAP_DEBUG_TEST", "=======================================")
-        } catch (e: Exception) {
-            Log.e("MAP_DEBUG_TEST", "정보 읽기 실패", e)
-        }
         binding = ActivityBeforeExploreBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -64,7 +57,7 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
         if (currentCardId.isEmpty()) { finish(); return }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() { goToMainActivity() }
+            override fun handleOnBackPressed() { goBackToMain() }
         })
 
         val fm = supportFragmentManager
@@ -86,27 +79,31 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
         drawMarkersIfReady()
     }
 
-    private fun goToMainActivity() {
+    private fun goBackToMain() {
+        if (isNavigatingBack) return
+        isNavigatingBack = true
+
         val intent = Intent(this, MainActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         startActivity(intent)
         finish()
     }
 
     private fun setupListeners() {
-        binding.beforeBackIv.setOnClickListener { goToMainActivity() }
+        binding.beforeBackIv.setOnClickListener { goBackToMain() }
         binding.btnToggleMap.setOnClickListener { toggleMap() }
-        binding.tabDistance.setOnClickListener { if (!isDistanceTabSelected) { isDistanceTabSelected = true; updateTabUI() } }
-        binding.tabNoise.setOnClickListener { if (isDistanceTabSelected) { isDistanceTabSelected = false; updateTabUI() } }
+
+        binding.tabDistance.setOnClickListener { if (currentTabIdx != 0) { currentTabIdx = 0; updateTabUI() } }
+        binding.tabNoise.setOnClickListener { if (currentTabIdx != 1) { currentTabIdx = 1; updateTabUI() } }
+        binding.tabSafety.setOnClickListener { if (currentTabIdx != 2) { currentTabIdx = 2; updateTabUI() } }
+
         binding.chipWalk.setOnClickListener { updateTransportUI(0) }
         binding.chipPublic.setOnClickListener { updateTransportUI(1) }
         binding.chipCar.setOnClickListener { updateTransportUI(2) }
         binding.chipBike.setOnClickListener { updateTransportUI(3) }
 
-        val context = this
-        val grayColor = ContextCompat.getColor(context, R.color.gray_900)
-        val blueColor = ContextCompat.getColor(context, R.color.brand_700)
-
+        val grayColor = ContextCompat.getColor(this, R.color.gray_900)
+        val blueColor = ContextCompat.getColor(this, R.color.brand_700)
 
         binding.beforeDayBtn.setOnClickListener {
             if (!isDayMode) {
@@ -144,21 +141,25 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateTabUI() {
         val selectedColor = ContextCompat.getColor(this, R.color.brand_700)
         val unselectedColor = ContextCompat.getColor(this, R.color.gray_500)
-        val targetTab = if (isDistanceTabSelected) binding.tabDistance else binding.tabNoise
 
-        if (isDistanceTabSelected) {
-            binding.tabDistance.setTextColor(selectedColor)
-            binding.tabNoise.setTextColor(unselectedColor)
-            binding.layoutContentDistance.visibility = View.VISIBLE
-            binding.layoutContentNoise.visibility = View.GONE
-        } else {
-            binding.tabDistance.setTextColor(unselectedColor)
-            binding.tabNoise.setTextColor(selectedColor)
-            binding.layoutContentDistance.visibility = View.GONE
-            binding.layoutContentNoise.visibility = View.VISIBLE
+        binding.tabDistance.setTextColor(if (currentTabIdx == 0) selectedColor else unselectedColor)
+        binding.tabNoise.setTextColor(if (currentTabIdx == 1) selectedColor else unselectedColor)
+        binding.tabSafety.setTextColor(if (currentTabIdx == 2) selectedColor else unselectedColor)
+
+        binding.layoutContentDistance.visibility = if (currentTabIdx == 0) View.VISIBLE else View.GONE
+        binding.layoutContentNoise.visibility = if (currentTabIdx == 1) View.VISIBLE else View.GONE
+        binding.layoutContentSafety.visibility = if (currentTabIdx == 2) View.VISIBLE else View.GONE
+
+        val targetTab = when (currentTabIdx) {
+            0 -> binding.tabDistance
+            1 -> binding.tabNoise
+            else -> binding.tabSafety
         }
 
         targetTab.post {
+            // ★ 화면 파괴 시 애니메이션 중지 방어코드
+            if (isFinishing || isDestroyed) return@post
+
             val startX = binding.tabIndicator.translationX
             val targetX = targetTab.left.toFloat()
             val startWidth = binding.tabIndicator.width
@@ -167,6 +168,9 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
             val animator = android.animation.ValueAnimator.ofFloat(0f, 1f)
             animator.duration = 250
             animator.addUpdateListener { animation ->
+                // ★ 애니메이션 실행 도중 화면 꺼지면 즉시 중지
+                if (isFinishing || isDestroyed) return@addUpdateListener
+
                 val fraction = animation.animatedFraction
                 binding.tabIndicator.translationX = startX + (targetX - startX) * fraction
                 val params = binding.tabIndicator.layoutParams
@@ -208,9 +212,7 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (originalScheduleList.isNotEmpty()) {
             val sortedList = originalScheduleList.sortedBy { item ->
-                when (mode) {
-                    0 -> item.walkingTimeMin; 1 -> item.transitTimeMin; 2 -> item.carTimeMin; 3 -> item.bicycleTimeMin; else -> item.walkingTimeMin
-                }
+                when (mode) { 0 -> item.walkingTimeMin; 1 -> item.transitTimeMin; 2 -> item.carTimeMin; 3 -> item.bicycleTimeMin; else -> item.walkingTimeMin }
             }
             lengthAdapter = LengthRankAdapter(sortedList)
             lengthAdapter.setMode(mode)
@@ -226,234 +228,199 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
                 val idx = text.indexOf(rank)
                 if (idx != -1) spannable.setSpan(ForegroundColorSpan(ContextCompat.getColor(this, R.color.brand_700)), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 binding.beforeLengthRankTv.text = spannable
-            } else {
-                binding.beforeLengthRankTv.text = "직주거리 정보를 찾을 수 없어요"
             }
         }
     }
 
-    private fun loadAllDataSafe() {
+    private fun loadAllDataSafe(isReload: Boolean = false) {
         lifecycleScope.launch {
             binding.loadingLayout.visibility = View.VISIBLE
             val service = RetrofitClient.getInstance(this@BeforeExploreActivity)
 
-            Log.d("API_TEST", "==================================================")
-            Log.d("API_TEST", "데이터 로드 시작! 현재 Card ID: $currentCardId")
             var retryCount = 0
-            val maxRetries = 15 // 여유롭게 최대 15번 (약 15초) 대기
+            val maxRetries = 10
 
-            var houses = emptyList<HouseResponse>()
-            var distanceMap = emptyMap<Long, DistanceResult>()
-            var lifeMap = emptyMap<Long, LifeResponse>()
-            var isDataReady = false
+            var finalHouses: List<HouseResponse>? = null
+            var finalDistanceMap: Map<Long, DistanceResult>? = null
+            var finalLifeMap: Map<Long, LifeResponse>? = null
+            var finalSafetyList: List<SafetyResponse>? = null
 
-            // =========================================================
-            // ★ 수정 1. 집 목록뿐만 아니라 '거리'와 '소음' 데이터도 계산이 끝났는지 같이 검사합니다!
-            // =========================================================
-// =========================================================
-            // ★ 수정: 껍데기만 왔는지, 알맹이(results)까지 꽉 차 있는지 독하게 검사합니다!
-            // =========================================================
             while (retryCount < maxRetries) {
                 try {
-                    Log.d("API_TEST", "데이터 계산 완료 확인 시도... (${retryCount + 1}/$maxRetries)")
-                    val houseRes = service.getCardHouseList(currentCardId)
-                    val distRes = service.getAnalysisDistance(currentCardId)
-                    val lifeRes = service.getAnalysisLife(currentCardId)
+                    val hResResponse = service.getCardHouseList(currentCardId)
+                    val hRes = hResResponse.body()
 
-                    val housesBody = houseRes.body()
-                    val distBodyList = distRes.body()
-                    val lifeBody = lifeRes.body()
+                    val isCardDeleted = hResResponse.code() == 404 || (hResResponse.isSuccessful && hRes != null && hRes.isEmpty())
 
-                    // 1. 집 목록이 제대로 왔는가?
-                    val isHouseReady = houseRes.isSuccessful && !housesBody.isNullOrEmpty()
+                    if (isReload && isCardDeleted) {
+                        binding.loadingLayout.visibility = View.GONE
+                        showCustomToast2("해당 탐색 스케줄에 대한 모든 일정이 삭제됐습니다.")
+                        goBackToMain()
+                        return@launch
+                    }
 
-                    // 2. ★ 핵심: 직주거리 데이터의 'results' 알맹이가 1개 이상 들어있는가?
-                    val isDistReady = distRes.isSuccessful &&
-                            !distBodyList.isNullOrEmpty() &&
-                            !distBodyList[0].results.isNullOrEmpty()
+                    if (!hRes.isNullOrEmpty()) finalHouses = hRes
 
-                    // 3. 소음 데이터가 제대로 왔는가?
-                    val isLifeReady = lifeRes.isSuccessful && !lifeBody.isNullOrEmpty()
+                    val dResList = service.getAnalysisDistance(currentCardId).body()
+                    val dRes = dResList?.firstOrNull()
+                    if (dRes != null && !dRes.results.isNullOrEmpty()) {
+                        transportMessage = dRes.transportMessage ?: ""
+                        bicycleMessage = dRes.bicycleMessage ?: ""
+                        finalDistanceMap = dRes.results.associateBy { it.houseId }
+                    }
 
-                    // 세 가지 알맹이가 모두 꽉 차 있을 때만 비로소 탈출!
-                    if (isHouseReady && isDistReady && isLifeReady) {
-                        houses = housesBody!!
+                    val lRes = service.getAnalysisLife(currentCardId).body()
+                    if (!lRes.isNullOrEmpty()) finalLifeMap = lRes.associateBy { it.houseId }
 
-                        val distBody = distBodyList!![0]
-                        transportMessage = distBody.transportMessage ?: ""
-                        bicycleMessage = distBody.bicycleMessage ?: ""
-                        distanceMap = distBody.results?.associateBy { it.houseId } ?: emptyMap()
+                    val sRes = service.getAnalysisSafety(currentCardId).body()
+                    if (!sRes.isNullOrEmpty()) finalSafetyList = sRes
 
-                        lifeMap = lifeBody!!.associateBy { it.houseId }
+                    val targetHouseCount = finalHouses?.size ?: 0
+                    val currentHouseIds = finalHouses?.map { it.houseId } ?: emptyList()
 
-                        isDataReady = true
-                        Log.d("API_TEST", "모든 데이터 알맹이 수신 완료! 루프 탈출")
+                    val isDistReady = finalDistanceMap != null && finalDistanceMap.keys.containsAll(currentHouseIds)
+                    val isLifeReady = finalLifeMap != null && finalLifeMap.keys.containsAll(currentHouseIds)
+                    val isSafetyReady = finalSafetyList != null && finalSafetyList.map { it.houseId }.containsAll(currentHouseIds)
+
+                    if (targetHouseCount >= 1 && isDistReady && isLifeReady && isSafetyReady) {
                         break
-                    } else {
-                        Log.w("API_TEST", "껍데기만 옴. 서버 계산 대기 중...")
                     }
                 } catch (e: Exception) {
-                    Log.e("API_TEST", "통신 지연 대기 중...", e)
+                    Log.e(TAG, "데이터 대기 중 예외 발생", e)
                 }
 
-                // 서버가 계산할 시간을 주기 위해 1초 대기 후 다시 찔러봄
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(1500)
                 retryCount++
             }
-            // 끝내 서버 계산이 안 끝났다면 에러 처리
-            if (!isDataReady) {
-                Toast.makeText(this@BeforeExploreActivity, "서버 분석이 지연되고 있습니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
-                binding.loadingLayout.visibility = View.GONE
-                return@launch
+
+            if (finalHouses != null && finalHouses.isNotEmpty()) {
+                renderUI(finalHouses, finalDistanceMap, finalLifeMap, finalSafetyList)
+            } else if (!isReload) {
+                showCustomToast("데이터를 불러오는 중입니다.")
             }
+            binding.loadingLayout.visibility = View.GONE
+        }
+    }
 
+    private fun renderUI(houses: List<HouseResponse>, distMap: Map<Long, DistanceResult>?, lifeMap: Map<Long, LifeResponse>?, safetyList: List<SafetyResponse>?) {
+        val service = RetrofitClient.getInstance(this)
+        lifecycleScope.launch {
+            var companyAddr = "직장 정보 없음"
             try {
-                // ----------------------------------------------------
-                // 주소 및 지도 마커 정보 조회 (얘네는 바로바로 옴)
-                // ----------------------------------------------------
-                var companyAddr = "직장 정보 없음"
-                try {
-                    val addrRes = service.getCardAddresses(currentCardId)
-                    if (addrRes.isSuccessful && !addrRes.body().isNullOrEmpty()) {
-                        companyAddr = addrRes.body()!![0].address ?: "주소 없음"
-                    }
-                } catch (e: Exception) { Log.e("API_TEST", "주소 예외", e) }
+                val addrRes = service.getCardAddresses(currentCardId)
+                if (addrRes.isSuccessful && !addrRes.body().isNullOrEmpty()) companyAddr = addrRes.body()!![0].address ?: ""
+                val mapRes = service.getCardMapInfo(currentCardId)
+                if (mapRes.isSuccessful && mapRes.body() != null) {
+                    mapInfoList = mapRes.body()!!
+                    drawMarkersIfReady()
+                }
+            } catch (e: Exception) {}
 
-                try {
-                    val mapRes = service.getCardMapInfo(currentCardId)
-                    if (mapRes.isSuccessful && mapRes.body() != null) {
-                        mapInfoList = mapRes.body()!!
-                        drawMarkersIfReady()
-                    }
-                } catch (e: Exception) { Log.e("API_TEST", "마커 예외", e) }
+            binding.beforeMyAddressTv.text = companyAddr
+            binding.beforeLengthRankDesTv.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
 
-                // ----------------------------------------------------
-                // UI 렌더링 조립
-                // ----------------------------------------------------
-                binding.beforeMyAddressTv.text = companyAddr
-                binding.beforeLengthRankDesTv.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
+            originalScheduleList = houses.map { house ->
+                val dist = distMap?.get(house.houseId)
+                val life = lifeMap?.get(house.houseId)
+                ScheduleItem(
+                    houseId = house.houseId, address = house.address ?: "",
+                    // ★ 서버에서 온 T 제거 및 포맷팅 (초 자르기)
+                    time = house.visitTime?.replace("T", " ")?.take(16) ?: "", rankLabel = house.label ?: "?",
+                    walkingTimeMin = dist?.walkingTimeMin ?: 0, walkingDistanceKm = dist?.walkingDistanceKm ?: 0.0,
+                    transitTimeMin = dist?.transitTimeMin ?: 0, transitPayment = dist?.transitPaymentStr ?: "",
+                    carTimeMin = dist?.carTimeMin ?: 0, bicycleTimeMin = dist?.bicycleTimeMin ?: 0,
+                    dayScore = life?.dayScore ?: 0, nightScore = life?.nightScore ?: 0,
+                    dayDesc = life?.message ?: "", nightDesc = life?.message ?: ""
+                )
+            }.sortedBy { it.rankLabel }
 
-                // =========================================================
-                // ★ 수정 2. 마지막에 .sortedBy { it.rankLabel } 을 붙여서 무조건 A, B, C 순서로 강제 정렬합니다!
-                // =========================================================
-                originalScheduleList = houses.map { house ->
-                    val dist = distanceMap[house.houseId]
-                    val life = lifeMap[house.houseId]
+            setupRecyclerViews(originalScheduleList)
+            updateSummaries(originalScheduleList)
+            updateTransportUI(0)
 
+            safetyList?.let { list ->
+                val safetyUiList = list.map { s ->
                     ScheduleItem(
-                        houseId = house.houseId,
-                        address = house.address ?: "주소 없음",
-                        time = house.visitTime ?: "",
-                        rankLabel = house.label ?: "?",
-                        walkingTimeMin = dist?.walkingTimeMin ?: 0,
-                        walkingDistanceKm = dist?.walkingDistanceKm ?: 0.0,
-                        transitTimeMin = dist?.transitTimeMin ?: 0,
-                        transitPayment = dist?.transitPaymentStr ?: "",
-                        carTimeMin = dist?.carTimeMin ?: 0,
-                        bicycleTimeMin = dist?.bicycleTimeMin ?: 0,
-                        dayScore = life?.dayScore ?: 0,
-                        nightScore = life?.nightScore ?: 0,
-                        dayDesc = life?.message ?: "",
-                        nightDesc = life?.message ?: ""
+                        houseId = s.houseId, address = "", time = "",
+                        dayScore = s.safetyScore, nightScore = 0,
+                        dayDesc = s.message ?: "CCTV ${s.cctvCount}대 · 가로등 ${s.streetlightCount}개 · 치안시설 ${s.policeCount}곳",
+                        rankLabel = originalScheduleList.find { it.houseId == s.houseId }?.rankLabel ?: "?"
                     )
-                }.sortedBy { it.rankLabel } // <--- 핵심 정렬 코드!
-
-                // 어댑터 연결
-                setupRecyclerViews(originalScheduleList)
-                updateSummaries(originalScheduleList)
-                updateTransportUI(0) // 0: 도보 모드로 초기화
-
-            } catch (e: Exception) {
-                Log.e("API_TEST", "최종 렌더링 중 알 수 없는 치명적 에러", e)
-            } finally {
-                binding.loadingLayout.visibility = View.GONE
+                }.sortedBy { it.rankLabel }
+                setupSafetyGraph(safetyUiList)
+                updateSafetySummaryText(safetyUiList)
             }
         }
+    }
+
+    private fun setupSafetyGraph(list: List<ScheduleItem>) {
+        binding.beforeSafetyGraphRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        safetyGraphAdapter = GraphAdapter(list) { desc ->
+            binding.beforeSafetyGraphDetailTv.visibility = if (desc.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.beforeSafetyGraphDetailTv.text = desc
+        }
+        binding.beforeSafetyGraphRv.adapter = safetyGraphAdapter
+        safetyGraphAdapter.setMode(true)
+    }
+
+    private fun updateSafetySummaryText(list: List<ScheduleItem>) {
+        val maxItem = list.maxByOrNull { it.dayScore }
+        val maxRank = maxItem?.rankLabel ?: "-"
+        val text = "안전 점수는 $maxRank 가 \n가장 높아요."
+        val spannable = SpannableString(text)
+        val brandColor = ContextCompat.getColor(this, R.color.brand_600)
+        val rankIndex = text.indexOf(maxRank)
+        if (rankIndex != -1) spannable.setSpan(ForegroundColorSpan(brandColor), rankIndex, rankIndex + maxRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        binding.beforeSafetyTv.text = spannable
     }
 
     private fun drawMarkersIfReady() {
         val map = naverMap ?: return
         if (mapInfoList.isEmpty()) return
-
         markerList.forEach { it.map = null }
         markerList.clear()
-
         val boundsBuilder = LatLngBounds.Builder()
         mapInfoList.forEach { mapInfo ->
             val position = LatLng(mapInfo.latitude, mapInfo.longitude)
             val marker = Marker()
             marker.position = position
-
-            // ==========================================
-            // ★ 1. 직장 주소 vs 탐색 주소 마커 분기 처리
-            // 백엔드에서 직장 주소 라벨을 "기존", "직장" 등으로 준다고 가정합니다.
-            // (만약 id가 무조건 0이라면 mapInfo.id == 0L 로 수정해주세요)
-            // ==========================================
-            if (mapInfo.label == "기준지" || mapInfo.label == "직장") {
-                marker.icon = com.naver.maps.map.overlay.OverlayImage.fromResource(R.drawable.ic_marker_home)
-            } else {
-                marker.icon = createCustomMarker(mapInfo.label)
-            }
-
-            // (선택) 마커 디자인 안에 이미 글자가 있으므로 기본 캡션은 숨깁니다.
-            // marker.captionText = mapInfo.label
-            // marker.captionTextSize = 14f
-
+            marker.icon = if (mapInfo.label == "기준지" || mapInfo.label == "직장") com.naver.maps.map.overlay.OverlayImage.fromResource(R.drawable.ic_marker_home) else createCustomMarker(mapInfo.label)
             marker.map = map
             markerList.add(marker)
             boundsBuilder.include(position)
         }
-        if (markerList.isNotEmpty()) {
-            map.moveCamera(CameraUpdate.fitBounds(boundsBuilder.build(), 100))
-        }
+        if (markerList.isNotEmpty()) map.moveCamera(CameraUpdate.fitBounds(boundsBuilder.build(), 100))
     }
 
     private fun createCustomMarker(rank: String): com.naver.maps.map.overlay.OverlayImage {
-        // 방금 만든 레이아웃을 메모리에 올립니다.
         val view = layoutInflater.inflate(R.layout.item_custom_marker, null)
         val bgIv = view.findViewById<android.widget.ImageView>(R.id.marker_bg_iv)
         val textTv = view.findViewById<android.widget.TextView>(R.id.marker_text_tv)
-
         textTv.text = rank
-
-        val brand100 = ContextCompat.getColor(this, R.color.brand_100)
-        val brand800 = ContextCompat.getColor(this, R.color.brand_800)
-        val brand400 = ContextCompat.getColor(this, R.color.brand_400)
-        val white = ContextCompat.getColor(this, R.color.white)
-        val brand700 = ContextCompat.getColor(this, R.color.brand_700)
-        val brand950 = ContextCompat.getColor(this, R.color.brand_950)
-        val black = ContextCompat.getColor(this, R.color.black)
-        val gray400 = ContextCompat.getColor(this, R.color.gray_400)
-        val gray700 = ContextCompat.getColor(this, R.color.gray_700)
-        val gray200 = ContextCompat.getColor(this, R.color.gray_200)
-
         val rankChar = if (rank.isNotEmpty()) rank[0] else '?'
-        val bgColor: Int
-        val textColor: Int
-
-        // 라벨에 따라 배경색과 텍스트색 결정
-        when (rankChar) {
-            'A' -> { bgColor = brand100; textColor = brand800 }
-            'B' -> { bgColor = brand400; textColor = white }
-            'C' -> { bgColor = brand700; textColor = white }
-            'D' -> { bgColor = brand950; textColor = white }
-            'E' -> { bgColor = white; textColor = black }
-            'F' -> { bgColor = gray400; textColor = white }
-            'G' -> { bgColor = gray700; textColor = white }
-            else -> { bgColor = gray200; textColor = black }
+        val bgColor = when (rankChar) {
+            'A' -> R.color.brand_100; 'B' -> R.color.brand_400; 'C' -> R.color.brand_700; 'D' -> R.color.brand_950; 'E' -> R.color.white; 'F' -> R.color.gray_400; 'G' -> R.color.gray_700; else -> R.color.gray_200
         }
-
-        // 이미지뷰(핀 배경) 틴트 입히기
-        bgIv.imageTintList = android.content.res.ColorStateList.valueOf(bgColor)
-        // 텍스트 색상 입히기
-        textTv.setTextColor(textColor)
-
-        // 완성된 View를 네이버 마커용 OverlayImage 객체로 뽑아냄
+        val textColor = if (rankChar == 'A' || rankChar == 'E' || rankChar == '?') R.color.brand_800 else R.color.white
+        bgIv.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, bgColor))
+        textTv.setTextColor(ContextCompat.getColor(this, textColor))
         return com.naver.maps.map.overlay.OverlayImage.fromView(view)
     }
 
     private fun setupRecyclerViews(list: List<ScheduleItem>) {
-        mainListAdapter = BeforeExploreAdapter(list)
+        mainListAdapter = BeforeExploreAdapter(list) { clickedItem ->
+            val bottomSheet = AddScheduleBottomSheet.newInstance(clickedItem.houseId, clickedItem.address, clickedItem.time)
+
+            // ★ 수정/삭제 완료 시 API 재호출하여 화면 갱신
+            bottomSheet.onSaveCompleted = {
+                lifecycleScope.launch {
+                    // 서버 DB 처리가 완료될 수 있도록 아주 짧은 딜레이 부여 (안전장치)
+                    kotlinx.coroutines.delay(300)
+                    loadAllDataSafe(isReload = true)
+                }
+            }
+            bottomSheet.show(supportFragmentManager, "EditScheduleBottomSheet")
+        }
         binding.beforeExploreListRv.adapter = mainListAdapter
 
         graphAdapter = GraphAdapter(list) { desc ->
@@ -464,15 +431,12 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
         graphAdapter.setMode(isDayMode)
     }
 
-    // ★ 수정됨: 소음 점수가 가장 '높은(max)' 것이 가장 조용한 집
     private fun updateSummaries(list: List<ScheduleItem>) {
         val bestDay = list.filter { it.dayScore > 0 }.maxByOrNull { it.dayScore }
         val bestNight = list.filter { it.nightScore > 0 }.maxByOrNull { it.nightScore }
-
         val dayRank = bestDay?.rankLabel ?: "-"
         val nightRank = bestNight?.rankLabel ?: "-"
         val brandColor = ContextCompat.getColor(this, R.color.brand_700)
-
         val noiseText = "낮에는 $dayRank, 밤에는 $nightRank 가 \n소음이 가장 낮아요."
         val noiseSpan = SpannableString(noiseText)
         val dayIdx = noiseText.indexOf(dayRank)
@@ -480,4 +444,5 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
         val nightIdx = noiseText.lastIndexOf(nightRank)
         if (nightIdx != -1) noiseSpan.setSpan(ForegroundColorSpan(brandColor), nightIdx, nightIdx + nightRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         binding.beforeNoiseTv.text = noiseSpan
-    }}
+    }
+}
