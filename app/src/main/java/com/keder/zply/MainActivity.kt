@@ -33,21 +33,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        binding.mainPlusBtn.setOnClickListener { openAddressFragment() }
+        binding.mainPlusBtn.setOnClickListener {
+            if (binding.mainPlusBtn.text.toString() == "오늘 할 일 바로가기") {
+                if (currentCardId.isNotEmpty()) {
+                    val intent = Intent(this, IngExploreActivity::class.java)
+                    intent.putExtra("CARD_ID", currentCardId)
+                    intent.putExtra("SHOW_TAB", "MEASURE")
+                    startActivity(intent)
+                }
+            } else {
+                openAddressFragment()
+            }
+        }
+
         binding.emptyCardAddBtn.setOnClickListener { openAddressFragment() }
         binding.errorMainReloadBt.setOnClickListener { fetchMainData() }
     }
 
     private fun initRecyclerViews() {
-        mainAdapter = MainCardRVAdapter(emptyList()) { item, status ->
-            val intent = when (status) {
-                ExploreStatus.BEFORE -> Intent(this, BeforeExploreActivity::class.java)
-                ExploreStatus.ING -> Intent(this, IngExploreActivity::class.java)
-                ExploreStatus.AFTER -> Intent(this, AfterExploreActivity::class.java)
+        mainAdapter = MainCardRVAdapter(items = emptyList(), onItemClick =  { item, status ->
+            if (item.cardId == "DUMMY_PLUS_CARD") {
+                openAddressFragment()
+                return@MainCardRVAdapter
             }
-            intent.putExtra("CARD_ID", item.cardId.toString())
+
+            val intent = if (status == ExploreStatus.AFTER) {
+                Intent(this, AfterExploreActivity::class.java)
+            } else {
+                Intent(this, IngExploreActivity::class.java).apply {
+                    putExtra("SHOW_TAB", "INFO")
+                }
+            }
+            intent.putExtra("CARD_ID", item.cardId)
             startActivity(intent)
-        }
+        }, onDeleteResetClick = {resetData()})
         binding.mainExploreListRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.mainExploreListRv.adapter = mainAdapter
 
@@ -56,6 +75,7 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this, IngExploreActivity::class.java)
                 intent.putExtra("CARD_ID", currentCardId)
                 intent.putExtra("HOUSE_ID", house.id)
+                intent.putExtra("SHOW_TAB", "MEASURE")
                 startActivity(intent)
             }
         }
@@ -68,6 +88,50 @@ class MainActivity : AppCompatActivity() {
         fetchMainData()
     }
 
+    // ★ 수정된 초기화 API 호출 함수 (내 정보 조회 -> 초기화 순차 실행)
+    private fun resetData() {
+        lifecycleScope.launch {
+            setViewState("LOADING")
+            try {
+                val service = RetrofitClient.getInstance(this@MainActivity)
+
+                // ★ 1. 내 정보 조회 API 먼저 호출하여 유저 ID 획득!
+                val userMeResponse = service.getUserMe()
+
+                if (userMeResponse.isSuccessful && userMeResponse.body() != null) {
+                    val currentUserId = userMeResponse.body()!!.id
+                    Log.d("API_RESET", "획득한 유저 ID: $currentUserId")
+
+                    // ★ 2. 방금 알아낸 ID를 헤더 파라미터로 넣어서 초기화 API 호출!
+                    val resetResponse = service.resetData(currentUserId)
+
+                    if (resetResponse.isSuccessful && resetResponse.body() != null) {
+                        val deletedStats = resetResponse.body()!!.deletedData
+                        Log.d("API_RESET", "초기화 성공: 카드 ${deletedStats.searchCards}개 삭제됨")
+
+                        showCustomToast2("데이터가 초기화되었습니다.")
+
+                        // 초기화 성공 시 메인 데이터를 처음부터 다시 불러와 화면 갱신
+                        fetchMainData()
+                    } else {
+                        Log.e("API_RESET", "초기화 실패 코드: ${resetResponse.code()}")
+                        showCustomToast("초기화에 실패했어요. 다시 시도해주세요.")
+                        setViewState("SUCCESS") // 로딩 바 숨기기
+                    }
+
+                } else {
+                    Log.e("API_RESET", "유저 정보 획득 실패 코드: ${userMeResponse.code()}")
+                    showCustomToast("유저 정보를 확인할 수 없어 초기화에 실패했습니다.")
+                    setViewState("SUCCESS") // 로딩 바 숨기기
+                }
+
+            } catch (e: Exception) {
+                Log.e("API_RESET", "초기화 에러 발생", e)
+                setViewState("ERROR")
+                showErrorOverlay { resetData() } // 에러 오버레이 표시
+            }
+        }
+    }
     private fun fetchMainData() {
         lifecycleScope.launch {
             setViewState("LOADING")
@@ -80,7 +144,6 @@ class MainActivity : AppCompatActivity() {
                 val cardsResponse = cardsDeferred.await()
 
                 if (nameResponse.code() == 401 || cardsResponse.code() == 401) {
-                    Log.d("Auth", "토큰 만료 감지 (401 에러). 로그인 화면으로 이동합니다.")
                     val tokenManager = TokenManager(this@MainActivity)
                     tokenManager.clearTokens()
                     val intent = Intent(this@MainActivity, LoginActivity::class.java)
@@ -95,72 +158,119 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (cardsResponse.isSuccessful && cardsResponse.body() != null) {
-                    val cards = cardsResponse.body()!!
-                    val uniqueCards = cards.distinctBy { it.cardId }
+                    val rawCards = cardsResponse.body()!!
+
+                    val uniqueCards = rawCards.distinctBy { it.cardId }
 
                     if (uniqueCards.isEmpty()) {
-                        binding.mainExploreListRv.visibility = View.GONE
-                        binding.layoutEmptyCard.visibility = View.VISIBLE
-                        binding.bottomBtnContainer.visibility = View.GONE
-                        binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
-                    } else {
+                        showEmptyStateAll()
+                        setViewState("SUCCESS")
+                        return@launch
+                    }
+
+                    // 1. 전체 탐색 개수 계산
+                    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Date())
+                    var totalTodayCount = 0
+                    uniqueCards.forEach { card ->
+                        try {
+                            val startStr = card.startDate.take(10)
+                            val endStr = (card.endDate ?: card.startDate).take(10)
+                            if (todayStr in startStr..endStr) {
+                                totalTodayCount += card.houseCount
+                            }
+                        } catch (e: Exception) {}
+                    }
+                    binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n${totalTodayCount}개 있어요"
+
+                    // 2. 카드 상태별 분기 (서버의 한글/영어 상태값을 내부 상태로 통일)
+                    val mappedCards = getMappedCardDataWithAddress(uniqueCards)
+                    val ingCards = mappedCards.filter { it.status == "ING" }
+                    val afterCards = mappedCards.filter { it.status == "AFTER" }
+                    val finalDisplayList = mutableListOf<MainCardData>()
+
+                    if (ingCards.isNotEmpty()) {
+                        finalDisplayList.addAll(ingCards.sortedWith(compareBy<MainCardData> { getStatusPriorityFromDate(it.date) }.thenBy { it.date }))
+                        finalDisplayList.add(MainCardData(status = "PLUS_BTN", date = "", location = "", count = 0, cardId = "DUMMY_PLUS_CARD"))
+
                         binding.mainExploreListRv.visibility = View.VISIBLE
                         binding.layoutEmptyCard.visibility = View.GONE
                         binding.bottomBtnContainer.visibility = View.VISIBLE
+                        binding.mainPlusBtn.text = "오늘 할 일 바로가기"
 
-                        val mappedCardsWithAddress = getMappedCardDataWithAddress(uniqueCards)
+                        currentCardId = finalDisplayList[0].cardId
 
-                        val finalSortedList = mappedCardsWithAddress.sortedWith(
-                            compareBy<MainCardData> { getStatusPriorityFromDate(it.date) }
-                                .thenBy { it.date }
-                        )
-                        mainAdapter.updateList(finalSortedList)
+                    } else if (afterCards.isNotEmpty()) {
+                        finalDisplayList.addAll(afterCards.sortedWith(compareBy<MainCardData> { getStatusPriorityFromDate(it.date) }.thenBy { it.date }))
 
-                        val targetId = if (finalSortedList.isNotEmpty()) finalSortedList[0].cardId else uniqueCards[0].cardId
-                        currentCardId = targetId
+                        binding.mainExploreListRv.visibility = View.VISIBLE
+                        binding.layoutEmptyCard.visibility = View.VISIBLE
+                        binding.bottomBtnContainer.visibility = View.VISIBLE
+                        binding.mainPlusBtn.text = "주거탐색 추가하기"
 
-                        try {
-                            val checklistRes = service.getChecklistDetails(targetId)
-                            if (checklistRes.isSuccessful && !checklistRes.body().isNullOrEmpty()) {
-                                val body = checklistRes.body()!!
+                        currentCardId = finalDisplayList[0].cardId
+                    } else {
+                        showEmptyStateAll()
+                        setViewState("SUCCESS")
+                        return@launch
+                    }
 
-                                // ★ [원복됨] 체크리스트 기준으로 오늘 개수 세기
-                                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Date())
-                                val todayHouseCount = body.find { it.date == todayStr }?.houses?.size ?: 0
-                                binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n${todayHouseCount}개 있어요"
+                    mainAdapter.updateList(finalDisplayList)
 
+                    // 3. 체크리스트 데이터 연동
+                    try {
+                        val checklistRes = service.getChecklistDetails(currentCardId)
+
+                        if (checklistRes.isSuccessful && checklistRes.body() != null) {
+                            val body = checklistRes.body()!!
+
+                            val hasValidData = body.any { it.houses != null && it.houses.isNotEmpty() }
+
+                            if (hasValidData) {
                                 binding.mainChecklistRv.visibility = View.VISIBLE
                                 binding.tvEmptyChecklist.visibility = View.GONE
 
                                 val sortedChecklist = body.map { group ->
-                                    val sortedHouses = group.houses.sortedWith(
+                                    val safeHouses = group.houses ?: emptyList()
+                                    val sortedHouses = safeHouses.sortedWith(
                                         compareBy<ChecklistHouseResponse> { it.isMeasurementCompleted }
                                             .thenBy { it.visitDateTime ?: "99:99" }
                                     )
                                     group.copy(houses = sortedHouses)
                                 }.sortedWith(
                                     compareBy<ChecklistGroupResponse> { it.isAllCompleted }
-                                        .thenBy { it.date }
+                                        .thenBy { it.date ?: "" }
                                 )
                                 checklistAdapter.updateData(sortedChecklist)
                             } else {
-                                binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
                                 showEmptyChecklistState()
                             }
-                        } catch (e: Exception) {
-                            Log.e("CHECKLIST_DEBUG", "체크리스트 호출 실패", e)
-                            binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
+                        } else {
                             showEmptyChecklistState()
                         }
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Checklist Error", e)
+                        showEmptyChecklistState()
                     }
+
                     setViewState("SUCCESS")
                 } else {
                     setViewState("ERROR")
+                    showErrorOverlay { fetchMainData() }
                 }
             } catch (e: Exception) {
+                Log.e("MainActivity", "Total Fetch Error", e)
                 setViewState("ERROR")
+                showErrorOverlay { fetchMainData() }
             }
         }
+    }
+
+    private fun showEmptyStateAll() {
+        binding.mainExploreListRv.visibility = View.GONE
+        binding.layoutEmptyCard.visibility = View.VISIBLE
+        binding.bottomBtnContainer.visibility = View.GONE
+        binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
+        showEmptyChecklistState()
     }
 
     private fun getStatusPriorityFromDate(dateString: String): Int {
@@ -217,13 +327,27 @@ class MainActivity : AppCompatActivity() {
                                 maxDateStr = dates.last()
                             }
                         }
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "집 목록 로딩 실패", e)
-                    }
+                    } catch (e: Exception) { }
 
                     val displayDate = if (minDateStr == maxDateStr) minDateStr else "$minDateStr ~ $maxDateStr"
 
-                    MainCardData(status = card.status, date = displayDate, location = fetchedAddress, count = card.houseCount, cardId = card.cardId)
+                    // ★ 핵심 변경 포인트: 백엔드에서 날아오는 상태값을 안전하게 앱 내부 상태(ING/AFTER)로 매핑합니다.
+                    val rawStatus = card.status?.toString() ?: ""
+                    val safeStatus = if (rawStatus.contains("예정") || rawStatus.contains("중") || rawStatus.contains("BEFORE") || rawStatus.contains("ING")) {
+                        "ING" // 탐색 예정, 탐색 중 -> 모두 앱 내부에서는 탐색 중(ING) 취급
+                    } else if (rawStatus.contains("종료") || rawStatus.contains("완료") || rawStatus.contains("AFTER")) {
+                        "AFTER" // 탐색 종료 -> 앱 내부에서는 탐색 후(AFTER) 취급
+                    } else {
+                        "ING" // 혹시 모를 알 수 없는 상태값이 오면 기본적으로 ING로 띄워줌
+                    }
+
+                    MainCardData(
+                        status = safeStatus,
+                        date = displayDate,
+                        location = fetchedAddress,
+                        count = card.houseCount,
+                        cardId = card.cardId
+                    )
                 }
             }.awaitAll()
         }

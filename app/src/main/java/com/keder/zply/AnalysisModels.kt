@@ -338,3 +338,24 @@ data class UpdateHouseRequest(
     val address: String,
     val visitDateTime: String
 )
+
+data class ResetResponse(
+    val message : String,
+    val deletedData : DeletedDataInfo
+)
+
+data class DeletedDataInfo(
+    val searchCards: Int,
+    val houses: Int,
+    val measurements: Int,
+    val images: Int
+)
+
+data class UserMeResponse(
+    val id: Long,
+    val email: String,
+    val name: String,
+    val status: String,
+    val createdAt: String,
+    val updatedAt: String
+)

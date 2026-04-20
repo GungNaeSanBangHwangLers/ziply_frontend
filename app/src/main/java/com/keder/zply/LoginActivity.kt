@@ -167,9 +167,4 @@ class LoginActivity : AppCompatActivity() {
             binding.loginProgressBar.visibility = View.GONE
         }
     }
-
-    // (참고) showCustomToast 함수가 없다면 기본 Toast로 대체하거나, Activity에 추가해 주세요.
-    private fun showCustomToast(message: String) {
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
-    }
 }

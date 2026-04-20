@@ -14,9 +14,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
 import android.widget.TextView
@@ -26,10 +24,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.widget.ViewPager2
 import com.keder.zply.databinding.ActivityIngExploreBinding
-import com.keder.zply.databinding.ItemIngHouseVpBinding
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -54,7 +49,6 @@ class IngExploreActivity : AppCompatActivity() {
     private var lightSensorListener: SensorEventListener? = null
 
     private var currentPhotoPath: String = ""
-
     private var isNavigatingBack = false
 
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess ->
@@ -89,16 +83,9 @@ class IngExploreActivity : AppCompatActivity() {
                 return
             }
 
-            // 1. 화면 내 뒤로 가기 화살표 클릭
-            binding.ingBackIv.setOnClickListener {
-                goBackToMain()
-            }
-
-            // 2. 휴대폰 자체 뒤로 가기 버튼 클릭
+            binding.ingBackIv.setOnClickListener { goBackToMain() }
             onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    goBackToMain()
-                }
+                override fun handleOnBackPressed() { goBackToMain() }
             })
 
             sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -129,7 +116,6 @@ class IngExploreActivity : AppCompatActivity() {
                             )
                             takePhotoLauncher.launch(photoURI)
                         } catch (ex: Exception) {
-                            Log.e("ZplyError", "카메라 실행 오류", ex)
                             showCustomToast("카메라를 실행할 수 없습니다.")
                         }
                     }
@@ -142,25 +128,19 @@ class IngExploreActivity : AppCompatActivity() {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.existing_info_container, existingInfoFragment, "EXISTING_INFO")
                         .commit()
-                } catch (e: Exception) {
-                    Log.e("z_error", "Fragment 에러", e)
-                }
+                } catch (e: Exception) { }
             }
 
             loadDataSafe()
 
         } catch (e: Exception) {
-            Log.e("z_error", "onCreate 에러", e)
             showCustomToast("화면을 불러오는 중 문제가 발생했습니다.")
         }
     }
 
-    // ==============================================================
-    // ★ [안전장치 적용] 한 번 실행되면 두 번 다시 실행되지 않는 철벽 탈출 함수
-    // ==============================================================
     private fun goBackToMain() {
-        if (isNavigatingBack) return // 이미 뒤로 가기를 누른 상태면 무시!
-        isNavigatingBack = true      // 자물쇠 채우기
+        if (isNavigatingBack) return
+        isNavigatingBack = true
 
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -172,11 +152,7 @@ class IngExploreActivity : AppCompatActivity() {
     private fun createImageFile(): File {
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.KOREA).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        return File.createTempFile(
-            "JPEG_${timeStamp}_",
-            ".jpg",
-            storageDir
-        ).apply {
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
             currentPhotoPath = absolutePath
         }
     }
@@ -249,35 +225,82 @@ class IngExploreActivity : AppCompatActivity() {
                 }
 
                 currentScheduleList = detailList.sortedBy { it.rankLabel }.toMutableList()
-                setupViewPager()
+
+                // ★ 시작 주거지 세팅 로직
+                val targetHouseId = intent.getLongExtra("HOUSE_ID", -1L)
+                val showTab = intent.getStringExtra("SHOW_TAB")
+
+                if (targetHouseId != -1L) {
+                    // 특정 주거지를 눌러서 들어온 경우
+                    currentHouseIndex = currentScheduleList.indexOfFirst { it.houseId == targetHouseId }
+                    if (currentHouseIndex == -1) currentHouseIndex = 0
+                } else {
+                    // 상단 카드 클릭 등 일반적인 진입: 첫 번째 미측정 주거지 찾기
+                    val unmeasuredIndex = currentScheduleList.indexOfFirst {
+                        it.measuredLightLux < 0f || it.measuredRoomCount <= 0 || it.imageList.isEmpty()
+                    }
+                    if (unmeasuredIndex != -1) {
+                        currentHouseIndex = unmeasuredIndex
+                    } else {
+                        // 모든 주거지가 측정 완료되었다면 자동으로 After 화면으로 이동
+                        val intent = Intent(this@IngExploreActivity, AfterExploreActivity::class.java)
+                        intent.putExtra("CARD_ID", cardId)
+                        startActivity(intent)
+                        finish()
+                        return@launch
+                    }
+                }
+
+                // 지정된 탭 활성화
+                if (showTab == "INFO") {
+                    binding.btn2.performClick()
+                } else {
+                    binding.btn1.performClick()
+                }
+
+                updateHouseUI()
+                updateStepsUI(currentHouseIndex)
 
             } catch (e: Exception) {
                 showCustomToast("데이터를 불러오는데 실패했습니다.")
+                showErrorOverlay { loadDataSafe() }
             } finally {
                 binding.loadingLayout.visibility = View.GONE
             }
         }
     }
 
-    private fun setupViewPager() {
-        try {
-            val vpAdapter = HousePagerAdapter(currentScheduleList)
-            binding.houseVp.adapter = vpAdapter
-            if (currentScheduleList.isNotEmpty()) {
-                binding.houseVp.offscreenPageLimit = 3
-            }
+    // ★ 단일 주거 정보 UI 업데이트 함수
+    private fun updateHouseUI() {
+        if (currentHouseIndex !in currentScheduleList.indices) return
+        val item = currentScheduleList[currentHouseIndex]
 
-            binding.houseVp.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    super.onPageSelected(position)
-                    try {
-                        stopAutoLightMeasurement()
-                        currentHouseIndex = position
-                        updateStepsUI(position)
-                    } catch (e: Exception) {}
-                }
-            })
-        } catch (e: Exception) {}
+        binding.vpRankTv.text = item.rankLabel
+        binding.vpDateTv.text = "${item.time} 탐색"
+        binding.vpAddressTv.text = item.address
+
+        val rankChar = if (item.rankLabel.isNotEmpty()) item.rankLabel[0] else '?'
+        val brand100 = ContextCompat.getColor(this, R.color.brand_100)
+        val brand800 = ContextCompat.getColor(this, R.color.brand_800)
+        val brand400 = ContextCompat.getColor(this, R.color.brand_400)
+        val white = ContextCompat.getColor(this, R.color.white)
+        val brand700 = ContextCompat.getColor(this, R.color.brand_700)
+        val brand950 = ContextCompat.getColor(this, R.color.brand_950)
+        val black = ContextCompat.getColor(this, R.color.black)
+        val gray400 = ContextCompat.getColor(this, R.color.gray_400)
+        val gray700 = ContextCompat.getColor(this, R.color.gray_700)
+        val gray200 = ContextCompat.getColor(this, R.color.gray_200)
+
+        when (rankChar) {
+            'A' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand100); binding.vpRankTv.setTextColor(brand800) }
+            'B' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand400); binding.vpRankTv.setTextColor(white) }
+            'C' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand700); binding.vpRankTv.setTextColor(white) }
+            'D' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand950); binding.vpRankTv.setTextColor(white) }
+            'E' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(white); binding.vpRankTv.setTextColor(black) }
+            'F' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray400); binding.vpRankTv.setTextColor(white) }
+            'G' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray700); binding.vpRankTv.setTextColor(white) }
+            else -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray200); binding.vpRankTv.setTextColor(black) }
+        }
     }
 
     private fun updateStepsUI(position: Int) {
@@ -308,24 +331,51 @@ class IngExploreActivity : AppCompatActivity() {
     private fun setStepStyleSafe(numTv: TextView?, titleTv: TextView?, descTv: TextView?, btn: TextView?, isCompleted: Boolean, btnText: String) {
         if (numTv == null || titleTv == null || descTv == null || btn == null) return
         try {
-            val context = this
             if (isCompleted) {
-                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.gray_500))
-                titleTv.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
-                descTv.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
-                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.gray_700))
-                btn.setTextColor(ContextCompat.getColor(context, R.color.gray_500))
+                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_500))
+                titleTv.setTextColor(ContextCompat.getColor(this, R.color.gray_500))
+                descTv.setTextColor(ContextCompat.getColor(this, R.color.gray_500))
+                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.gray_700))
+                btn.setTextColor(ContextCompat.getColor(this, R.color.gray_500))
                 btn.isEnabled = false
             } else {
-                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.white))
-                titleTv.setTextColor(ContextCompat.getColor(context, R.color.white))
-                descTv.setTextColor(ContextCompat.getColor(context, R.color.white))
-                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.brand_700))
-                btn.setTextColor(ContextCompat.getColor(context, R.color.white))
+                numTv.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.white))
+                titleTv.setTextColor(ContextCompat.getColor(this, R.color.white))
+                descTv.setTextColor(ContextCompat.getColor(this, R.color.white))
+                btn.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.brand_700))
+                btn.setTextColor(ContextCompat.getColor(this, R.color.white))
                 btn.isEnabled = true
             }
             btn.text = btnText
         } catch (e: Exception) {}
+    }
+
+    // ★ 현재 주거의 측정이 모두 끝났는지 확인하고, 다음으로 자동 이동하는 함수
+    private fun checkAndMoveToNextHouse() {
+        if (currentHouseIndex !in currentScheduleList.indices) return
+        val item = currentScheduleList[currentHouseIndex]
+
+        val isFullyMeasured = item.measuredLightLux >= 0f && item.measuredRoomCount > 0 && item.imageList.isNotEmpty()
+
+        if (isFullyMeasured) {
+            val nextIndex = currentScheduleList.indexOfFirst {
+                it.measuredLightLux < 0f || it.measuredRoomCount <= 0 || it.imageList.isEmpty()
+            }
+
+            if (nextIndex != -1) {
+                showCustomToast2("현재 집의 측정을 모두 완료하여 다음 집으로 이동합니다.")
+                stopAutoLightMeasurement()
+                currentHouseIndex = nextIndex
+                updateHouseUI()
+                updateStepsUI(currentHouseIndex)
+            } else {
+                showCustomToast2("모든 집의 측정을 완료했습니다. 결과 화면으로 이동합니다.")
+                val intent = Intent(this, AfterExploreActivity::class.java)
+                intent.putExtra("CARD_ID", cardId)
+                startActivity(intent)
+                finish()
+            }
+        }
     }
 
     private fun startAutoLightMeasurement(position: Int) {
@@ -363,9 +413,13 @@ class IngExploreActivity : AppCompatActivity() {
                     val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
                     prefs.edit().putFloat("lux_${houseId}", lux).apply()
                     currentScheduleList[position].measuredLightLux = lux
-                    if (currentHouseIndex == position) updateStepsUI(position)
 
-                    val existingInfoFragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
+                    if (currentHouseIndex == position) {
+                        updateStepsUI(position)
+                        checkAndMoveToNextHouse() // 자동 검사
+                    }
+
+                    val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
                     existingInfoFragment?.updateMeasurementLocal(houseId = houseId, lightLux = lux)
 
                     showCustomToast2("채광 측정을 완료했어요")
@@ -398,8 +452,9 @@ class IngExploreActivity : AppCompatActivity() {
                 if (roomCount > 0) {
                     currentScheduleList[currentHouseIndex].measuredRoomCount = roomCount
                     updateStepsUI(currentHouseIndex)
+                    checkAndMoveToNextHouse() // 자동 검사
 
-                    val existingInfoFragment = supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
+                    val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
                     existingInfoFragment?.updateMeasurementLocal(houseId = houseId, roomCount = roomCount)
 
                     showCustomToast2("방향 측정을 완료했어요")
@@ -435,16 +490,18 @@ class IngExploreActivity : AppCompatActivity() {
                     prefs.edit().putString("photos_${houseId}", if (existingPhotos.isEmpty()) absolutePath else "$existingPhotos,$absolutePath").apply()
 
                     currentScheduleList[position].imageList.add(absolutePath)
-                    if (currentHouseIndex == position) updateStepsUI(position)
+
+                    if (currentHouseIndex == position) {
+                        updateStepsUI(position)
+                        checkAndMoveToNextHouse() // 자동 검사
+                    }
 
                     val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
-                        ?: supportFragmentManager.findFragmentById(R.id.existing_info_container) as? ExistingInfoFragment
-
                     existingInfoFragment?.updateMeasurementLocal(houseId = houseId, newImagePath = absolutePath)
 
                     showCustomToast2("사진이 추가되었습니다.")
                 } else {
-                    showCustomToast("사진 등록에 실패했어요. (에러: ${response.code()})")
+                    showCustomToast("사진 등록에 실패했어요.")
                 }
             } catch (e: Exception) {
                 showCustomToast("네트워크 오류가 발생했습니다.")
@@ -488,43 +545,4 @@ class IngExploreActivity : AppCompatActivity() {
         super.onDestroy()
         stopAutoLightMeasurement()
     }
-}
-
-class HousePagerAdapter(private val items: List<ScheduleItem>) : RecyclerView.Adapter<HousePagerAdapter.ViewHolder>() {
-    inner class ViewHolder(val binding: ItemIngHouseVpBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: ScheduleItem) {
-            binding.vpRankTv.text = item.rankLabel
-            binding.vpDateTv.text = "${item.time} 탐색"
-            binding.vpAddressTv.text = item.address
-
-            val context = binding.root.context
-            val brand100 = ContextCompat.getColor(context, R.color.brand_100)
-            val brand800 = ContextCompat.getColor(context, R.color.brand_800)
-            val brand400 = ContextCompat.getColor(context, R.color.brand_400)
-            val white = ContextCompat.getColor(context, R.color.white)
-            val brand700 = ContextCompat.getColor(context, R.color.brand_700)
-            val brand950 = ContextCompat.getColor(context, R.color.brand_950)
-            val black = ContextCompat.getColor(context, R.color.black)
-            val gray400 = ContextCompat.getColor(context, R.color.gray_400)
-            val gray700 = ContextCompat.getColor(context, R.color.gray_700)
-            val gray200 = ContextCompat.getColor(context, R.color.gray_200)
-
-            val rankChar = if (item.rankLabel.isNotEmpty()) item.rankLabel[0] else '?'
-            when (rankChar) {
-                'A' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand100); binding.vpRankTv.setTextColor(brand800) }
-                'B' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand400); binding.vpRankTv.setTextColor(white) }
-                'C' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand700); binding.vpRankTv.setTextColor(white) }
-                'D' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(brand950); binding.vpRankTv.setTextColor(white) }
-                'E' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(white); binding.vpRankTv.setTextColor(black) }
-                'F' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray400); binding.vpRankTv.setTextColor(white) }
-                'G' -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray700); binding.vpRankTv.setTextColor(white) }
-                else -> { binding.vpRankTv.backgroundTintList = ColorStateList.valueOf(gray200); binding.vpRankTv.setTextColor(black) }
-            }
-        }
-    }
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        return ViewHolder(ItemIngHouseVpBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-    }
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(items[position])
-    override fun getItemCount(): Int = items.size
 }

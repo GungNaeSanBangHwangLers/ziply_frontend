@@ -7,7 +7,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -29,7 +28,6 @@ class ExploreScheduleFragment : Fragment() {
     private val gson = Gson()
 
     private val DRAFT_PREF = "schedule_draft_pref"
-
     private val KEY_DRAFT_LIST = "draft_schedule_list"
     private val KEY_COMPANY_ADDRESS = "draft_company_address"
 
@@ -44,7 +42,7 @@ class ExploreScheduleFragment : Fragment() {
         loadDraftScheduleData()
 
         binding.scheduleAdditionBtn.setOnClickListener {
-            if (scheduleList.size > 7) {
+            if (scheduleList.size >= 7) {
                 showCustomToast("최대 7개까지 등록할 수 있어요")
                 return@setOnClickListener
             }
@@ -74,14 +72,10 @@ class ExploreScheduleFragment : Fragment() {
             return
         }
 
-        // 버튼 연타 방지
         binding.addressNextBtnMb.isEnabled = false
 
         lifecycleScope.launch {
             try {
-                Log.d("API_DEBUG", "전송할 일정 개수: ${scheduleList.size}개")
-                scheduleList.forEach { Log.d("API_DEBUG", " - 주소: ${it.address}, 시간: ${it.time}") }
-
                 val requestHouses = scheduleList.map { item ->
                     RequestHouse(
                         address = item.address,
@@ -94,28 +88,31 @@ class ExploreScheduleFragment : Fragment() {
                     houses = requestHouses
                 )
 
-                Log.d("API_DEBUG", "최종 요청 객체 houses 개수: ${request.houses.size}")
-
                 val response = RetrofitClient.getInstance(requireContext()).createReviewCard(request)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val cardId = response.body()!!
-                    Log.d("API_DEBUG", "카드 생성 성공 ID: $cardId")
-
                     draftPref.edit().clear().apply()
                     scheduleList.clear()
 
-                    val intent = Intent(requireContext(), BeforeExploreActivity::class.java)
-                    intent.putExtra("CARD_ID", cardId)
+                    // ★ 핵심 수정: 앱을 끄지 않고, 현재 떠있는 프래그먼트들을 모두 치워버립니다.
+                    parentFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+
+                    // 메인 화면 갱신을 위해 Intent를 날립니다.
+                    val intent = Intent(requireContext(), MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     startActivity(intent)
-                    requireActivity().finish()
+
+                    // (기존에 앱을 끄던 requireActivity().finish() 코드를 삭제했습니다!)
+
                 } else {
-                    Log.e("API_DEBUG", "등록 실패: ${response.code()} / ${response.errorBody()?.string()}")
-                    showCustomToast("등록에 실패했어요. 다시 시도해주세요")
+                    if (response.code() == 400) {
+                        showCustomToast("올바른 주소를 입력해주세요")
+                    } else {
+                        showCustomToast("등록에 실패했어요. 다시 시도해주세요")
+                    }
                     binding.addressNextBtnMb.isEnabled = true
                 }
             } catch (e: Exception) {
-                Log.e("API_DEBUG", "네트워크 오류", e)
                 showCustomToast("등록에 실패했어요. 다시 시도해주세요")
                 binding.addressNextBtnMb.isEnabled = true
             }
@@ -130,7 +127,6 @@ class ExploreScheduleFragment : Fragment() {
             val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
             outputFormat.format(safeDate)
         } catch (e: Exception) {
-            Log.e("DateConvert", "날짜 변환 실패: $displayTime", e)
             val outputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
             outputFormat.format(Date())
         }

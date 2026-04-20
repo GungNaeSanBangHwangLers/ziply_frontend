@@ -9,93 +9,87 @@ import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.ItemChecklistGroupBinding
 import com.keder.zply.databinding.ItemChecklistHouseBinding
 import com.keder.zply.databinding.ItemMainCardBinding
+import com.keder.zply.databinding.ItemMainPlusBinding
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// ==========================================
-// 1. 상단 메인 카드 어댑터 (가로 스크롤)
-// ==========================================
 class MainCardRVAdapter(
     private var items: List<MainCardData>,
-    private val onItemClick : (MainCardData, ExploreStatus) -> Unit
-) : RecyclerView.Adapter<MainCardRVAdapter.Holder>(){
+    private val onItemClick: (MainCardData, ExploreStatus) -> Unit,
+    private val onDeleteResetClick : () -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    // 뷰 타입을 구분하기 위한 상수
+    companion object {
+        private const val VIEW_TYPE_NORMAL = 0
+        private const val VIEW_TYPE_PLUS = 1
+    }
 
     fun updateList(newItems: List<MainCardData>) {
         this.items = newItems
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-        val binding = ItemMainCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return Holder(binding)
+    // ★ 1. 아이템의 상태가 "PLUS_BTN"이면 다른 뷰 타입을 반환합니다.
+    override fun getItemViewType(position: Int): Int {
+        return if (items[position].status == "PLUS_BTN") {
+            VIEW_TYPE_PLUS
+        } else {
+            VIEW_TYPE_NORMAL
+        }
     }
 
-    override fun onBindViewHolder(holder: Holder, position: Int) {
-        holder.bind(items[position])
+    // ★ 2. 뷰 타입에 따라 다른 XML(Binding)을 연결해 줍니다.
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_PLUS) {
+            // 플러스 버튼 카드 (item_main_plus.xml)
+            val binding = ItemMainPlusBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            PlusViewHolder(binding)
+        } else {
+            // 일반 탐색 카드 (item_main_card.xml)
+            val binding = ItemMainCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            NormalViewHolder(binding)
+        }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = items[position]
+        if (holder is NormalViewHolder) {
+            holder.bind(item)
+        } else if (holder is PlusViewHolder) {
+            holder.bind(item)
+        }
     }
 
     override fun getItemCount(): Int = items.size
 
-    inner class Holder(private val binding : ItemMainCardBinding) : RecyclerView.ViewHolder(binding.root){
-        fun bind(item: MainCardData){
+    // 일반 카드를 처리하는 뷰홀더
+    inner class NormalViewHolder(private val binding: ItemMainCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: MainCardData) {
             binding.tvDate.text = item.date
+            // ★ XML 구조에 맞게 데이터 바인딩
             binding.tvLocation.text = "현재 ${item.location} 인근"
+            binding.tvCountDesc.text = "${item.count}개 주거를 탐색 중이에요"
 
-            val currentStatus = calculateStatusFromDateText(item.date)
-
-            val statusText = when(currentStatus){
-                ExploreStatus.ING -> "${item.count}개 주거를 탐색 중이에요"
-                ExploreStatus.AFTER -> "${item.count}개 주거를 탐색 완료했어요"
-                ExploreStatus.BEFORE -> "${item.count}개 주거를 탐색할 예정이에요"
+            binding.root.setOnClickListener {
+                val statusEnum = if (item.status == "AFTER") ExploreStatus.AFTER else ExploreStatus.ING
+                onItemClick(item, statusEnum)
             }
-            binding.tvCountDesc.text = statusText
+        }
+    }
 
-            val bgResId = when(currentStatus) {
-//                ExploreStatus.ING -> R.drawable.gradient_card_ing       // 진행 중
-//                ExploreStatus.BEFORE -> R.drawable.gradient_card_will   // 진행 예정
-//                ExploreStatus.AFTER -> R.drawable.gradient_card_ed      // 종료
-                ExploreStatus.ING -> R.drawable.bg_brand_800       // 진행 중
-                ExploreStatus.BEFORE -> R.drawable.bg_brand_800  // 진행 예정
-                ExploreStatus.AFTER -> R.drawable.bg_gray_600     // 종료
+    // 플러스 버튼 카드를 처리하는 뷰홀더
+    inner class PlusViewHolder(private val binding: ItemMainPlusBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: MainCardData) {
+            binding.tvDate.setOnClickListener {
+                onItemClick(item, ExploreStatus.ING)
             }
-
-            binding.exploreCardCl.backgroundTintList = null
-            binding.exploreCardCl.setBackgroundResource(bgResId)
-
-            binding.root.setOnClickListener{
-                onItemClick(item, currentStatus)
+            binding.deleteIv.setOnClickListener {
+                onDeleteResetClick()
             }
         }
 
-        private fun calculateStatusFromDateText(dateString: String): ExploreStatus {
-            return try {
-                val parts = dateString.split("~").map { it.trim() }
-                if (parts.isEmpty()) return ExploreStatus.BEFORE
-
-                val startDateStr = parts[0]
-                val endDateStr = if (parts.size > 1) parts[1] else startDateStr
-
-                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
-                val todayFormat = SimpleDateFormat("yyyyMMdd", Locale.KOREA)
-
-                val start = sdf.parse(startDateStr) ?: return ExploreStatus.BEFORE
-                val end = sdf.parse(endDateStr) ?: start
-                val today = Date()
-
-                val startInt = todayFormat.format(start).toInt()
-                val endInt = todayFormat.format(end).toInt()
-                val todayInt = todayFormat.format(today).toInt()
-
-                when {
-                    todayInt < startInt -> ExploreStatus.BEFORE
-                    todayInt > endInt -> ExploreStatus.AFTER
-                    else -> ExploreStatus.ING
-                }
-            } catch (e: Exception) {
-                ExploreStatus.BEFORE
-            }
-        }
     }
 }
 
