@@ -69,7 +69,14 @@ class ExistingInfoFragment : Fragment() {
 
         setupListeners()
         updateTabUI()
-        loadAllDataSafe()
+        //loadAllDataSafe()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (cardId.isNotEmpty()) {
+            loadAllDataSafe()
+        }
     }
 
     private fun setupListeners() {
@@ -111,7 +118,6 @@ class ExistingInfoFragment : Fragment() {
         val selectedColor = ContextCompat.getColor(ctx, R.color.brand_700)
         val unselectedColor = ContextCompat.getColor(ctx, R.color.gray_500)
 
-        // ★ 바인딩이 널인지 안전 확인
         val safeBinding = _binding ?: return
 
         safeBinding.tabDistance.setTextColor(if (currentTabIdx == 0) selectedColor else unselectedColor)
@@ -128,7 +134,6 @@ class ExistingInfoFragment : Fragment() {
             else -> safeBinding.tabSafety
         }
 
-        // ★ post(비동기) 내부에서 파괴 여부 꼼꼼하게 체크
         targetTab.post {
             val currentBinding = _binding ?: return@post
             val tabLocation = IntArray(2)
@@ -160,7 +165,7 @@ class ExistingInfoFragment : Fragment() {
             val animator = android.animation.ValueAnimator.ofFloat(0f, 1f)
             animator.duration = 250
             animator.addUpdateListener { animation ->
-                val activeBinding = _binding ?: return@addUpdateListener // 중간에 파괴되면 즉시 정지
+                val activeBinding = _binding ?: return@addUpdateListener
                 val fraction = animation.animatedFraction
                 activeBinding.tabIndicator.translationX = startX + (targetX - startX) * fraction
                 val params = activeBinding.tabIndicator.layoutParams
@@ -205,11 +210,28 @@ class ExistingInfoFragment : Fragment() {
             else -> safeBinding.tvTransportInfo.visibility = View.GONE
         }
 
-        val sortedList = originalScheduleList.sortedBy { item ->
-            when (mode) {
-                0 -> item.walkingTimeMin; 1 -> item.transitTimeMin; 2 -> item.carTimeMin; 3 -> item.bicycleTimeMin; else -> item.walkingTimeMin
+        // ★ 3. 데이터가 없는 구간을 최단거리로, 이후 도보 시간으로 우선순위 정렬
+        val sortedList = originalScheduleList.sortedWith(Comparator { a, b ->
+            val timeA = when (mode) { 0 -> a.walkingTimeMin; 1 -> a.transitTimeMin; 2 -> a.carTimeMin; 3 -> a.bicycleTimeMin; else -> a.walkingTimeMin }
+            val timeB = when (mode) { 0 -> b.walkingTimeMin; 1 -> b.transitTimeMin; 2 -> b.carTimeMin; 3 -> b.bicycleTimeMin; else -> b.walkingTimeMin }
+
+            if (mode != 0) {
+                val aMissing = timeA <= 0
+                val bMissing = timeB <= 0
+
+                if (aMissing && bMissing) {
+                    a.walkingTimeMin.compareTo(b.walkingTimeMin)
+                } else if (aMissing) {
+                    -1
+                } else if (bMissing) {
+                    1
+                } else {
+                    timeA.compareTo(timeB)
+                }
+            } else {
+                timeA.compareTo(timeB)
             }
-        }
+        })
 
         if (!::lengthAdapter.isInitialized) {
             lengthAdapter = LengthRankAdapter(sortedList)
@@ -220,8 +242,8 @@ class ExistingInfoFragment : Fragment() {
         lengthAdapter.setMode(mode)
 
         val brand700 = ContextCompat.getColor(ctx, R.color.brand_700)
-        val shortestItem = sortedList.filter { it.walkingDistanceKm > 0.0 || it.walkingTimeMin > 0 }
-            .minByOrNull { if (it.walkingDistanceKm > 0.0) it.walkingDistanceKm else it.walkingTimeMin.toDouble() }
+        // 완벽하게 정렬된 리스트의 첫 번째 아이템이 1순위 (최단거리)
+        val shortestItem = sortedList.firstOrNull()
 
         if (shortestItem != null) {
             val rank = shortestItem.rankLabel
@@ -296,7 +318,6 @@ class ExistingInfoFragment : Fragment() {
                     detailList.add(ScheduleItem(
                         houseId = house.houseId,
                         address = house.address ?: "주소 없음",
-                        // ★ 서버에서 온 T 제거 및 포맷팅 (초 자르기)
                         time = house.visitTime?.replace("T", " ")?.take(16) ?: "",
                         rankLabel = house.label ?: "?",
                         measuredLightLux = displayLight,
@@ -339,6 +360,7 @@ class ExistingInfoFragment : Fragment() {
 
             } catch (e: Exception) {
                 Log.e("ExistingInfo", "렌더링 에러", e)
+                showErrorOverlay { loadAllDataSafe() }
             } finally {
                 _binding?.loadingLayout?.visibility = View.GONE
             }
@@ -480,7 +502,6 @@ class ExistingInfoFragment : Fragment() {
 
             if (::cardAdapter.isInitialized) {
                 activity?.runOnUiThread {
-                    // UI 스레드에서 어댑터를 확실하게 새로고침
                     cardAdapter.notifyItemChanged(index)
                 }
             }

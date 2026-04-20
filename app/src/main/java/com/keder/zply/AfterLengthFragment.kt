@@ -80,7 +80,7 @@ class AfterLengthFragment : Fragment() {
                             adapter.updateFavorites(favorites)
                         }
 
-                        updateTransportUI(0) // 초기 설정 (도보)
+                        updateTransportUI(0)
                     } else {
                         binding.errorLayout.visibility = View.VISIBLE
                     }
@@ -124,22 +124,38 @@ class AfterLengthFragment : Fragment() {
             else -> binding.tvTransportInfo.visibility = View.GONE
         }
 
-        val sortedList = originalScheduleList.sortedBy { item ->
-            when (mode) {
-                0 -> item.walkingTimeMin; 1 -> item.transitTimeMin; 2 -> item.carTimeMin; 3 -> item.bicycleTimeMin; else -> item.walkingTimeMin
-            }
-        }
+        // ★ 3. 데이터가 없는 구간을 최단거리로, 이후 도보 시간으로 우선순위 정렬
+        val sortedList = originalScheduleList.sortedWith(Comparator { a, b ->
+            val timeA = when (mode) { 0 -> a.walkingTimeMin; 1 -> a.transitTimeMin; 2 -> a.carTimeMin; 3 -> a.bicycleTimeMin; else -> a.walkingTimeMin }
+            val timeB = when (mode) { 0 -> b.walkingTimeMin; 1 -> b.transitTimeMin; 2 -> b.carTimeMin; 3 -> b.bicycleTimeMin; else -> b.walkingTimeMin }
 
-        adapter.updateList(sortedList) // ★ 어댑터에 updateList 메서드가 필요합니다!
+            if (mode != 0) {
+                val aMissing = timeA <= 0
+                val bMissing = timeB <= 0
+
+                if (aMissing && bMissing) {
+                    a.walkingTimeMin.compareTo(b.walkingTimeMin)
+                } else if (aMissing) {
+                    -1
+                } else if (bMissing) {
+                    1
+                } else {
+                    timeA.compareTo(timeB)
+                }
+            } else {
+                timeA.compareTo(timeB)
+            }
+        })
+
+        adapter.updateList(sortedList)
         adapter.setMode(mode)
 
-        // 상단 안내 문구 갱신 (물리적 거리 기준)
-        val shortestDistanceItem = originalScheduleList.filter { it.walkingDistanceKm > 0.0 || it.walkingTimeMin > 0 }
-            .minByOrNull { if (it.walkingDistanceKm > 0.0) it.walkingDistanceKm else it.walkingTimeMin.toDouble() }
-
         val brand700 = ContextCompat.getColor(requireContext(), R.color.brand_700)
-        if (shortestDistanceItem != null) {
-            val rank = shortestDistanceItem.rankLabel
+        // 완벽하게 정렬된 리스트의 첫 번째 아이템이 1순위 (최단거리)
+        val shortestItem = sortedList.firstOrNull()
+
+        if (shortestItem != null) {
+            val rank = shortestItem.rankLabel
             val text = "직주거리는 $rank 가 \n가장 짧아요"
             val spannable = SpannableString(text)
             val idx = text.indexOf(rank)

@@ -120,10 +120,12 @@ class AfterExploreActivity : AppCompatActivity() {
                     setupViewPager()
                 } else {
                     showCustomToast("데이터를 불러오지 못했어요, 다시 시도해주세요")
+                    showErrorOverlay { loadInitialData(cardId) }
                 }
 
             } catch (e: Exception) {
                 Log.e("AfterExplore", "초기화 실패", e)
+                showErrorOverlay { loadInitialData(cardId) }
             } finally {
                 binding.loadingLayout.visibility = View.GONE
             }

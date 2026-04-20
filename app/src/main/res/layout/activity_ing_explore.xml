@@ -17,7 +17,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
-
     <include
         android:id="@+id/ing_progress_layout"
         layout="@layout/layout_step_progress_ing"
@@ -104,14 +103,53 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"/>
 
-
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/house_vp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/current_house_info_container"
                 android:layout_width="match_parent"
-                android:layout_height="90dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:clipToPadding="false"
-                app:layout_constraintTop_toBottomOf="@id/text_vp" />
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp"
+                android:background="@drawable/gray_bg16"
+                app:layout_constraintTop_toBottomOf="@id/text_vp">
+
+                <TextView
+                    android:id="@+id/vp_rank_tv"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_rank_circle"
+                    android:backgroundTint="@color/brand_100"
+                    android:gravity="center"
+                    android:text="A"
+                    android:textColor="@color/brand_800"
+                    android:textAppearance="@style/caption1_Semibold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/vp_date_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="탐색 날짜"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/caption1_Median"
+                    app:layout_constraintBottom_toBottomOf="@id/vp_rank_tv"
+                    app:layout_constraintStart_toEndOf="@id/vp_rank_tv"
+                    app:layout_constraintTop_toTopOf="@id/vp_rank_tv" />
+
+                <TextView
+                    android:id="@+id/vp_address_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="탐색 주소"
+                    android:textColor="@color/white"
+                    android:textAppearance="@style/body1_Semibold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/vp_rank_tv" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/steps_container"
@@ -119,7 +157,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:padding="4dp"
-                app:layout_constraintTop_toBottomOf="@id/house_vp">
+                app:layout_constraintTop_toBottomOf="@id/current_house_info_container">
 
                 <TextView
                     android:id="@+id/step1_num"
@@ -343,6 +381,5 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

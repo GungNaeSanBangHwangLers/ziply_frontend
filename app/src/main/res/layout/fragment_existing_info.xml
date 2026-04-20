@@ -60,20 +60,24 @@
             app:layout_constraintTop_toTopOf="@id/tab_distance" />
 
         <View
-            android:id="@+id/tab_indicator"
-            android:layout_width="1dp"
-            android:layout_height="2dp"
-            android:background="@color/brand_600"
-            android:layout_marginTop="-2dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tab_distance" />
-
-        <View
             android:id="@+id/divider_line"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/gray_600"
+            android:layout_marginTop="-1.5dp"
             app:layout_constraintTop_toBottomOf="@id/tab_indicator" />
+
+        <View
+            android:id="@+id/tab_indicator"
+            android:layout_width="1dp"
+            android:layout_height="3dp"
+            android:background="@color/brand_600"
+            android:layout_marginTop="-2dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tab_distance"
+            app:layout_constraintBottom_toTopOf="@id/divider_line"/>
+
+
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_content_distance"
@@ -273,6 +277,9 @@
                     android:layout_marginTop="16dp"
                     android:padding="10dp"
                     android:background="@drawable/gray_bg"
+                    android:backgroundTint="@color/gray_900"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginEnd="20dp"
                     android:text="상세 정보"
                     android:textAppearance="@style/caption1_Median"
                     android:textColor="@color/white"
@@ -340,6 +347,9 @@
                     android:layout_marginTop="16dp"
                     android:padding="10dp"
                     android:background="@drawable/gray_bg"
+                    android:backgroundTint="@color/gray_900"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginEnd="20dp"
                     android:text="그래프를 눌러 상세 정보를 확인하세요."
                     android:textAppearance="@style/caption1_Median"
                     android:textColor="@color/gray_300"

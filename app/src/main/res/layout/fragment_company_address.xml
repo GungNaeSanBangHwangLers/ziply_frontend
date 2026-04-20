@@ -54,10 +54,12 @@
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:fillViewport="true"
             android:scrollbars="none"
             android:overScrollMode="never"
             android:requiresFadingEdge="horizontal"
             android:fadingEdgeLength="30dp">
+
             <TextView
                 android:id="@+id/address_input_tv"
                 android:layout_width="match_parent"
@@ -71,8 +73,7 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"/>
         </HorizontalScrollView>
-        </FrameLayout>
-<!--    <TextView-->
+    </FrameLayout><!--    <TextView-->
 <!--        android:id="@+id/address_input_tv"-->
 <!--        android:layout_width="360dp"-->
 <!--        android:layout_height="48dp"-->

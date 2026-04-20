@@ -66,7 +66,6 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
 
     var onSaveCompleted : (()->Unit)? = null
 
-    // 수정 모드 구분을 위한 변수
     private var editHouseId: Long = -1L
     private var isEditMode: Boolean = false
 
@@ -133,7 +132,6 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         setupInteractions()
         setupKeyboardBehavior()
 
-        // ★ 모드에 따른 초기 뷰/버튼 설정
         if (isEditMode) {
             setupEditMode()
             binding.addressNextBtnMb.visibility = View.GONE
@@ -172,10 +170,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             scrollToValue(binding.minuteRecyclerView, minuteList, minStr, true)
 
             updateCalendarGrid()
-
-        } catch (e: Exception) {
-            // 파싱 실패 무시
-        }
+        } catch (e: Exception) { }
     }
 
     private fun scrollToValue(rv: RecyclerView, list: List<String>, target: String, isInfinite: Boolean) {
@@ -192,13 +187,10 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         currentStep = step
         binding.mainStepFlipper.displayedChild = step
 
-        // ★ [핵심] 모드에 따라 버튼 컨테이너를 처음부터 끝까지 고정
         if (isEditMode) {
-            // 비포액티비티(수정 모드): 무조건 수정/삭제 컨테이너 노출
             binding.addressNextBtnMb.visibility = View.GONE
             binding.bottomBtnContainer.visibility = View.VISIBLE
         } else {
-            // 익스플로어(추가 모드): 무조건 단일 버튼 노출
             binding.addressNextBtnMb.visibility = View.VISIBLE
             binding.bottomBtnContainer.visibility = View.GONE
         }
@@ -207,41 +199,26 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
             0 -> {
                 binding.onFlowIv.setImageResource(R.drawable.ic_on_flow)
                 binding.scheduleTitleTv.text = "탐색할 집의 \n주소를 입력해주세요"
-
-                // 비포액티비티는 처음부터 "수정하기"
-                if (isEditMode) {
-                    binding.addressNext2BtnMb.text = "수정하기"
-                } else {
-                    binding.addressNextBtnMb.text = "다음으로"
-                }
+                if (isEditMode) binding.addressNext2BtnMb.text = "수정하기"
+                else binding.addressNextBtnMb.text = "다음으로"
             }
             1 -> {
                 hideKeyboard()
                 binding.onFlowIv.setImageResource(R.drawable.ic_on_flow2)
                 binding.scheduleTitleTv.text = "탐색할 날짜와 시간을\n입력해주세요"
-
-                // 비포액티비티는 계속 "수정하기", 익스플로어는 "다음으로"
-                if (isEditMode) {
-                    binding.addressNext2BtnMb.text = "수정하기"
-                } else {
-                    binding.addressNextBtnMb.text = "다음으로"
-                }
+                if (isEditMode) binding.addressNext2BtnMb.text = "수정하기"
+                else binding.addressNextBtnMb.text = "다음으로"
             }
             2 -> {
                 binding.onFlowIv.setImageResource(R.drawable.ic_on_flow2)
                 binding.scheduleTitleTv.text = "탐색할 날짜와 시간을\n입력해주세요"
-
-                // 익스플로어는 마지막 단계에서 "입력하기"로 변경
-                if (isEditMode) {
-                    binding.addressNext2BtnMb.text = "수정하기"
-                } else {
-                    binding.addressNextBtnMb.text = "입력하기"
-                }
-
+                if (isEditMode) binding.addressNext2BtnMb.text = "수정하기"
+                else binding.addressNextBtnMb.text = "입력하기"
                 binding.hourRecyclerView.post { updateRealTimeDisplay() }
             }
         }
     }
+
     private fun moveStepTo(step: Int) {
         if (step > currentStep) {
             binding.mainStepFlipper.showNext()
@@ -254,24 +231,16 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
     private fun setupInteractions() {
         val onNextOrSaveClick = {
             when (currentStep) {
-                0 -> {
-                    if (binding.scheduleInputEt.text.isNotBlank()) moveStepTo(1)
-                }
-                1 -> {
-                    if (selectedDate != null) moveStepTo(2)
-                }
-                2 -> {
-                    if (isEditMode) updateHouseOnServer() else validateAndSave()
-                }
+                0 -> if (binding.scheduleInputEt.text.isNotBlank()) moveStepTo(1)
+                1 -> if (selectedDate != null) moveStepTo(2)
+                2 -> if (isEditMode) updateHouseOnServer() else validateAndSave()
             }
         }
 
         binding.addressNextBtnMb.setOnClickListener { onNextOrSaveClick() }
         binding.addressNext2BtnMb.setOnClickListener { onNextOrSaveClick() }
 
-        binding.deleteBtnMb.setOnClickListener {
-            deleteHouseOnServer()
-        }
+        binding.deleteBtnMb.setOnClickListener { deleteHouseOnServer() }
 
         binding.btnPrevMonth.setOnClickListener {
             currentCalendarDate = currentCalendarDate.minusMonths(1)
@@ -291,17 +260,38 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
     private fun updateCalendarGrid() {
         binding.tvYearMonth.text = currentCalendarDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월"))
 
-        val dayList = ArrayList<LocalDate?>()
+        val dayList = ArrayList<LocalDate?>() // 기존 어댑터 타입 호환을 위해 ? 유지
         val firstDayOfMonth = currentCalendarDate.withDayOfMonth(1)
         val lastDayOfMonth = currentCalendarDate.lengthOfMonth()
         val dayOfWeekValue = firstDayOfMonth.dayOfWeek.value
         val emptyCount = if (dayOfWeekValue == 7) 0 else dayOfWeekValue
 
-        for (i in 0 until emptyCount) dayList.add(null)
-        for (i in 1..lastDayOfMonth) dayList.add(currentCalendarDate.withDayOfMonth(i))
+        // ★ 1. 이전 달 날짜 채우기 (null 대신 실제 날짜 넣기)
+        val prevMonth = currentCalendarDate.minusMonths(1)
+        val prevMonthDays = prevMonth.lengthOfMonth()
+        for (i in emptyCount - 1 downTo 0) {
+            dayList.add(prevMonth.withDayOfMonth(prevMonthDays - i))
+        }
 
+        // ★ 2. 이번 달 날짜 채우기
+        for (i in 1..lastDayOfMonth) {
+            dayList.add(currentCalendarDate.withDayOfMonth(i))
+        }
+
+        // ★ 3. 다음 달 날짜 채우기 (달력 42칸 꽉 채우기)
+        val nextMonth = currentCalendarDate.plusMonths(1)
+        val remainingCount = 42 - dayList.size
+        for (i in 1..remainingCount) {
+            dayList.add(nextMonth.withDayOfMonth(i))
+        }
+
+        // 기존 어댑터 연결
         val adapter = DateAdapter(dayList, selectedDate) { clickedDate ->
             selectedDate = clickedDate
+            // 클릭한 날짜가 다른 달이면 달력 페이지도 같이 넘어가게 처리
+            if (clickedDate.monthValue != currentCalendarDate.monthValue) {
+                currentCalendarDate = clickedDate.withDayOfMonth(1)
+            }
             updateCalendarGrid()
         }
         binding.calendarRecyclerView.adapter = adapter
@@ -414,6 +404,13 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         } else {
             mutableListOf()
         }
+
+        // ★ 2. 중복 시간 검증 및 토스트 메시지 처리
+        if (currentList.any { it.time == fullTimeStr }) {
+            showCustomToast("중복된 시간은 입력 불가합니다.")
+            return
+        }
+
         currentList.add(ScheduleItem(address, fullTimeStr))
 
         val newJsonString = gson.toJson(currentList)
@@ -426,9 +423,6 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         dismiss()
     }
 
-    // =========================================================
-    // ★ 실제 서버 데이터 수정 로직 (PATCH)
-    // =========================================================
     private fun updateHouseOnServer() {
         val address = binding.scheduleInputEt.text.toString()
         if (address.isBlank() || selectedDate == null) return
@@ -455,12 +449,10 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
 
                 if (response.isSuccessful) {
                     isSaveSuccess = true
-                    // ★ 커스텀 성공 토스트로 변경
                     showCustomToast2("일정이 수정되었습니다.")
                     onSaveCompleted?.invoke()
                     dismiss()
                 } else {
-                    // ★ 커스텀 실패 토스트로 변경
                     showCustomToast("수정에 실패했어요. 다시 시도해주세요.")
                     binding.addressNext2BtnMb.isEnabled = true
                     binding.deleteBtnMb.isEnabled = true
@@ -473,9 +465,6 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    // =========================================================
-    // ★ 실제 서버 데이터 삭제 로직 (DELETE)
-    // =========================================================
     private fun deleteHouseOnServer() {
         binding.addressNext2BtnMb.isEnabled = false
         binding.deleteBtnMb.isEnabled = false
@@ -487,12 +476,10 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
 
                 if (response.isSuccessful) {
                     isSaveSuccess = true
-                    // ★ 커스텀 성공 토스트로 변경 (모두 삭제되었을 때의 특별한 토스트는 BeforeExploreActivity에서 띄웁니다)
                     showCustomToast2("일정이 삭제되었습니다.")
                     onSaveCompleted?.invoke()
                     dismiss()
                 } else {
-                    // ★ 커스텀 실패 토스트로 변경
                     showCustomToast("삭제에 실패했어요. 다시 시도해주세요.")
                     binding.addressNext2BtnMb.isEnabled = true
                     binding.deleteBtnMb.isEnabled = true

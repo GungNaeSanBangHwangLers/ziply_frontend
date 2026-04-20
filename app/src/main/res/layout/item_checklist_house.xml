@@ -10,13 +10,14 @@
     android:paddingVertical="20dp">
 
     <ImageView
-        android:id="@+id/iv_check"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:src="@drawable/ic_gray_check"
+        android:id="@+id/iv_arrow"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:src="@drawable/back"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
+
 
     <TextView
         android:id="@+id/tv_house_info"
@@ -26,8 +27,18 @@
         android:text="00:00 서울특별시 동작구 상도로 333길\n333-333 탐색"
         android:textAppearance="@style/caption1_Median"
         android:textColor="@color/white"
-        app:layout_constraintStart_toEndOf="@id/iv_check"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="10dp"
+        app:layout_constraintStart_toEndOf="@id/iv_arrow"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/iv_check"
         app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <ImageView
+        android:id="@+id/iv_check"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@drawable/ic_gray_check"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

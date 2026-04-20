@@ -5,8 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:fitsSystemWindows="true"
-    >
+    android:fitsSystemWindows="true">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -35,6 +34,9 @@
                 android:id="@+id/main_explore_count_tv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:lineSpacingExtra="3dp"
+                android:includeFontPadding="false"
                 android:text="오늘 탐색 예정 주거가\n0개 있어요"
                 android:textAppearance="@style/heading2_Semibold"
                 android:textColor="@color/white"
@@ -199,6 +201,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:backgroundTint="@color/brand_700"
+            app:cornerRadius="6dp"
             android:text="새로고침"
             android:textColor="@color/white"/>
     </LinearLayout>

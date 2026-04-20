@@ -39,7 +39,6 @@ class GraphAdapter(
             val rankChar = if (rankString.isNotEmpty()) rankString[0] else '?'
             binding.graphRankTv.text = rankString
 
-
             val rankIndex = if (rankChar in 'A'..'Z') rankChar - 'A' else 7
 
             val score = if (isDayMode) item.dayScore else item.nightScore
@@ -55,24 +54,49 @@ class GraphAdapter(
             val rankColor = getRankColor(context, rankIndex)
             val textColor = getRankTextColor(context, rankIndex)
 
-            val drawable = GradientDrawable()
-            drawable.shape = GradientDrawable.RECTANGLE
-            drawable.setColor(rankColor)
-            drawable.cornerRadius = dpToPx(context, 10).toFloat()
+            val barDrawable = GradientDrawable()
+            barDrawable.shape = GradientDrawable.RECTANGLE
+            barDrawable.setColor(rankColor)
+            barDrawable.cornerRadius = dpToPx(context, 10).toFloat()
 
             binding.graphBarView.backgroundTintList = null
-            binding.graphBarView.background = drawable
+            binding.graphBarView.background = barDrawable
 
             binding.graphRankTv.background.setTint(rankColor)
             binding.graphRankTv.setTextColor(textColor)
 
             binding.root.alpha = 1.0f
 
-            if (selectedPosition == position) {
-                binding.root.setBackgroundResource(R.drawable.bg_graph)
+            val isSelectedItem = (selectedPosition == position)
+            val isFavoriteItem = favoriteSet.contains(item.houseId)
+
+            // ★ 해결 포인트: 회색 배경(선택)과 흰색 테두리(즐겨찾기)를 코드로 완벽하게 결합
+            val combinedDrawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(context, 16).toFloat() // 기존 배경의 둥글기 유지
+
+                // 1. 터치 여부에 따른 배경색
+                if (isSelectedItem) {
+                    setColor(ContextCompat.getColor(context, R.color.gray_900))
+                } else {
+                    setColor(Color.TRANSPARENT)
+                }
+
+                // 2. 즐겨찾기 여부에 따른 테두리
+                if (isFavoriteItem) {
+                    setStroke(dpToPx(context, 2), Color.WHITE)
+                } else {
+                    setStroke(0, Color.TRANSPARENT)
+                }
+            }
+
+            // 통합된 디자인을 내부 컨테이너에 적용하고, 최상위 루트 배경은 비움 (충돌 방지)
+            binding.graphContentContainer.background = combinedDrawable
+            binding.root.background = null
+
+            if (isSelectedItem) {
                 binding.graphScoreTv.setTextColor(Color.WHITE)
             } else {
-                binding.root.setBackgroundColor(Color.TRANSPARENT)
                 binding.graphScoreTv.setTextColor(ContextCompat.getColor(context, R.color.white))
             }
 
@@ -86,16 +110,9 @@ class GraphAdapter(
                 }
                 notifyDataSetChanged()
             }
-
-            if (favoriteSet.contains(item.houseId)) {
-                binding.root.setBackgroundResource(R.drawable.stroke_2dp_white)
-            } else {
-                binding.root.setBackgroundResource(0)
-            }
         }
     }
 
-    // [유지] 함수 내부의 position 변수명은 그대로 둬도 되지만, 의미는 'Rank Index'임
     private fun getRankColor(context: Context, rankIndex: Int): Int {
         return when (rankIndex) {
             0 -> ContextCompat.getColor(context, R.color.brand_100)

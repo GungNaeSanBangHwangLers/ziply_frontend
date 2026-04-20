@@ -15,6 +15,9 @@ class DateAdapter(
     private val onDateClick: (LocalDate) -> Unit
 ) : RecyclerView.Adapter<DateAdapter.DateViewHolder>() {
 
+    // ★ 달력의 정중앙(15번째 데이터)을 기준으로 '현재 보여지는 달(Month)'이 몇 월인지 파악합니다.
+    private val currentDisplayedMonth = dayList.getOrNull(15)?.monthValue
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DateViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_calendar_date, parent, false)
         return DateViewHolder(view)
@@ -32,33 +35,37 @@ class DateAdapter(
         fun bind(date: LocalDate?) {
             if (date == null) {
                 dayTv.text = ""
-                // 빈칸일 때는 배경을 투명하게 하거나 숨김
                 dayTv.background = null
                 itemView.isEnabled = false
                 itemView.setOnClickListener(null)
             } else {
                 itemView.isEnabled = true
                 dayTv.text = date.dayOfMonth.toString()
-
-                // ★ 핵심: 배경 리소스 재설정 (재사용 문제 방지)
                 dayTv.setBackgroundResource(R.drawable.bg_gray900_8)
 
                 val context = itemView.context
-                if (date == selectedDate) {
-                    // ★ 선택됨: Gray 800 (원래 색상)
-                    // (R.color.gray800이 정확한지 확인해주세요. 없다면 #424242 등)
-                    val color800 = ContextCompat.getColor(context, R.color.gray_900)
-                    dayTv.background.setTint(color800)
 
+                // ★ 해당 칸의 날짜가 '현재 보여지는 달'에 속하는지 판별
+                val isCurrentMonth = (date.monthValue == currentDisplayedMonth)
+
+                if (date == selectedDate) {
+                    // [선택된 날짜]
+                    val color900 = ContextCompat.getColor(context, R.color.gray_900)
+                    dayTv.background.setTint(color900)
                     dayTv.setTextColor(Color.WHITE)
                 } else {
-                    // ★ 선택 안됨: Gray 900 (더 어두운 색)
-                    // (R.color.gray900이 정확한지 확인해주세요)
-                    val color900 = ContextCompat.getColor(context, R.color.gray_800)
-                    dayTv.background.setTint(color900)
+                    // [선택되지 않은 날짜]
+                    val color800 = ContextCompat.getColor(context, R.color.gray_800)
+                    dayTv.background.setTint(color800)
 
-                    // 선택 안된 날짜 텍스트 색상 (약간 흐리게)
-                    dayTv.setTextColor(Color.parseColor("#888888"))
+                    // ★ 이전 달 / 다음 달 날짜 처리 분기
+                    if (isCurrentMonth) {
+                        // 이번 달 날짜 (기존 색상 유지)
+                        dayTv.setTextColor(Color.parseColor("#888888"))
+                    } else {
+                        // 이전 달 & 다음 달 날짜 (gray_700으로 더 흐리게)
+                        dayTv.setTextColor(ContextCompat.getColor(context, R.color.gray_700))
+                    }
                 }
 
                 itemView.setOnClickListener {
