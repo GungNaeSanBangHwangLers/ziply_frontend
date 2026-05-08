@@ -139,8 +139,8 @@ class AfterNoiseFragment : Fragment() {
 
     private fun updateNoiseSummaryText(list: List<ScheduleItem>) {
         if (list.isEmpty()) return
-        val minDayItem = list.minByOrNull { it.dayScore }
-        val minNightItem = list.minByOrNull { it.nightScore }
+        val minDayItem = list.filter { it.dayScore > 0 }.maxByOrNull { it.dayScore }
+        val minNightItem = list.filter { it.nightScore > 0 }.maxByOrNull { it.nightScore }
         val minDayRank = minDayItem?.rankLabel ?: "-"
         val minNightRank = minNightItem?.rankLabel ?: "-"
         val text = "낮에는 $minDayRank, 밤에는 $minNightRank 가 \n소음이 가장 낮아요."

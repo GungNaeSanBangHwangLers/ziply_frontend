@@ -437,8 +437,8 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateSummaries(list: List<ScheduleItem>) {
-        val bestDay = list.filter { it.dayScore > 0 }.minByOrNull { it.dayScore }
-        val bestNight = list.filter { it.nightScore > 0 }.minByOrNull { it.nightScore }
+        val bestDay = list.filter { it.dayScore > 0 }.maxByOrNull { it.dayScore }
+        val bestNight = list.filter { it.nightScore > 0 }.maxByOrNull { it.nightScore }
         val dayRank = bestDay?.rankLabel ?: "-"
         val nightRank = bestNight?.rankLabel ?: "-"
         val brandColor = ContextCompat.getColor(this, R.color.brand_700)
