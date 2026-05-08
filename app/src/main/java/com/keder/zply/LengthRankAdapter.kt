@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.widget.TextViewCompat // ★ 스타일 동적 적용을 위한 필수 임포트
 import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.ItemLengthRankBinding
 
@@ -15,85 +16,97 @@ class LengthRankAdapter(
 
     private var currentMode: Int = 0 // 0: 도보, 1: 대중교통, 2: 자동차, 3: 자전거
 
-    // ★ 1. 즐겨찾기 목록을 저장할 변수 추가
     private var favoriteSet: Set<Long> = emptySet()
+    private var cachedMinTime: Int? = null
+    private var cachedMaxTime: Int? = null
+
+    private fun getTimeByMode(item: ScheduleItem): Int = when (currentMode) {
+        0 -> item.walkingTimeMin
+        1 -> item.transitTimeMin
+        2 -> item.carTimeMin
+        3 -> item.bicycleTimeMin
+        else -> item.walkingTimeMin
+    }
+
+    private fun recomputeMinMax() {
+        val allTimes = items.map { getTimeByMode(it) }
+        cachedMinTime = allTimes.minOrNull()
+        cachedMaxTime = allTimes.maxOrNull()
+    }
 
     fun setMode(mode: Int) {
         this.currentMode = mode
-        notifyDataSetChanged()
+        recomputeMinMax()
+        notifyItemRangeChanged(0, items.size)
     }
 
     fun updateList(newList: List<ScheduleItem>) {
         this.items = newList
+        recomputeMinMax()
         notifyDataSetChanged()
     }
 
-    // ★ 2. 뷰모델에서 즐겨찾기 목록이 바뀌면 어댑터를 새로고침하는 함수 추가
     fun updateFavorites(newSet: Set<Long>) {
+        val oldSet = this.favoriteSet
         this.favoriteSet = newSet
-        notifyDataSetChanged()
+        items.forEachIndexed { i, item ->
+            if (oldSet.contains(item.houseId) != newSet.contains(item.houseId)) {
+                notifyItemChanged(i)
+            }
+        }
     }
 
     inner class ViewHolder(val binding: ItemLengthRankBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: ScheduleItem, isMin: Boolean, isMax: Boolean, isLast: Boolean) {
+        fun bind(item: ScheduleItem, time: Int, isMin: Boolean, isMax: Boolean, isLast: Boolean) {
             val context = binding.root.context
 
-            // ==========================================
-            // ★ 3. 즐겨찾기 유무에 따른 하얀 테두리 배경 적용
-            // ==========================================
             if (favoriteSet.contains(item.houseId)) {
-                // 즐겨찾기 된 아이템이면 하얀 테두리 배경 씌우기
                 binding.rankCardLayout.setBackgroundResource(R.drawable.stroke_2dp_white)
             } else {
-                // 아니면 배경을 투명하게(없게) 초기화
                 binding.rankCardLayout.setBackgroundResource(R.drawable.gray_bg16)
             }
 
-            // 1. 랭크 텍스트 & A~G 맞춤 색상 적용
             binding.itemRankTv.text = item.rankLabel
             setRankStyle(binding.itemRankTv, item.rankLabel)
 
-            // 2. 마지막 아이템의 화살표(>) 숨기기
             if (isLast) {
                 binding.itemArrowTv.visibility = View.GONE
             } else {
                 binding.itemArrowTv.visibility = View.VISIBLE
             }
 
-            // 3. 시간에 맞게 텍스트 설정
-            val time = when (currentMode) {
-                0 -> item.walkingTimeMin
-                1 -> item.transitTimeMin
-                2 -> item.carTimeMin
-                3 -> item.bicycleTimeMin
-                else -> item.walkingTimeMin
-            }
-
-            if (time > 0) {
-                binding.itemMinuteTv.text = "${time}분"
+            // ==========================================
+            // ★ 수정: 시간에 따라 텍스트 및 TextAppearance 변경
+            // ==========================================
+            if (time == 0) {
+                binding.itemMinuteTv.text = "도보가 더 빨라요"
+                // 0분일 때: caption2_Semibold 적용
+                TextViewCompat.setTextAppearance(binding.itemMinuteTv, R.style.caption2_Semibold)
             } else {
-                binding.itemMinuteTv.text = "-"
+                binding.itemMinuteTv.text = "${time}분"
+                // 0분이 아닐 때: 기존 caption1_Semibold 적용
+                TextViewCompat.setTextAppearance(binding.itemMinuteTv, R.style.caption1_Semibold)
             }
 
-            // 4. 최소 / 최대 뱃지 처리
-            if (time > 0 && isMin) {
+            // ==========================================
+            // 5. 최소 / 최대 뱃지 처리
+            // ==========================================
+            if (isMin) {
                 binding.itemMinMaxTv.visibility = View.VISIBLE
                 binding.itemMinMaxTv.text = "최소"
                 binding.itemMinMaxTv.setTextColor(ContextCompat.getColor(context, R.color.brand_800))
                 binding.itemMinMaxTv.background.setTint(ContextCompat.getColor(context, R.color.brand_100))
-            } else if (time > 0 && isMax) {
+            } else if (isMax) {
                 binding.itemMinMaxTv.visibility = View.VISIBLE
                 binding.itemMinMaxTv.text = "최대"
                 binding.itemMinMaxTv.setTextColor(ContextCompat.getColor(context, R.color.error_800))
-                binding.itemMinMaxTv.background.setTint(Color.parseColor("#FFE5E5")) // 연한 붉은색 배경
+                binding.itemMinMaxTv.background.setTint(Color.parseColor("#FFE5E5"))
             } else {
-                // 중간 값은 뱃지 숨김
                 binding.itemMinMaxTv.visibility = View.INVISIBLE
             }
         }
     }
 
-    // A~G 라벨별 색상을 지정하는 함수
     private fun setRankStyle(textView: TextView, rank: String) {
         val context = textView.context
         val brand100 = ContextCompat.getColor(context, R.color.brand_100)
@@ -127,33 +140,15 @@ class LengthRankAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val validTimes = items.map {
-            when (currentMode) {
-                0 -> it.walkingTimeMin
-                1 -> it.transitTimeMin
-                2 -> it.carTimeMin
-                3 -> it.bicycleTimeMin
-                else -> it.walkingTimeMin
-            }
-        }.filter { it > 0 }
-
-        val minTime = validTimes.minOrNull()
-        val maxTime = validTimes.maxOrNull()
-
-        val currentItemTime = when (currentMode) {
-            0 -> items[position].walkingTimeMin
-            1 -> items[position].transitTimeMin
-            2 -> items[position].carTimeMin
-            3 -> items[position].bicycleTimeMin
-            else -> items[position].walkingTimeMin
-        }
+        val currentItemTime = getTimeByMode(items[position])
+        val minTime = cachedMinTime
+        val maxTime = cachedMaxTime
 
         val isMin = (currentItemTime == minTime) && (minTime != null) && (minTime != maxTime)
         val isMax = (currentItemTime == maxTime) && (maxTime != null) && (minTime != maxTime)
-
         val isLast = (position == items.size - 1)
 
-        holder.bind(items[position], isMin, isMax, isLast)
+        holder.bind(items[position], currentItemTime, isMin, isMax, isLast)
     }
 
     override fun getItemCount(): Int = items.size

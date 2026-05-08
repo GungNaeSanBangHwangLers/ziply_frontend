@@ -26,6 +26,8 @@ import androidx.viewpager2.widget.ViewPager2
 import com.keder.zply.databinding.FragmentExistingInfoBinding
 import kotlinx.coroutines.launch
 
+private const val TAG_SAFETY = "API_EXISTING_SAFETY"
+
 class ExistingInfoFragment : Fragment() {
 
     private var _binding: FragmentExistingInfoBinding? = null
@@ -47,6 +49,12 @@ class ExistingInfoFragment : Fragment() {
     private lateinit var lengthAdapter: LengthRankAdapter
     private lateinit var graphAdapter: GraphAdapter
     private lateinit var safetyGraphAdapter: GraphAdapter
+    private lateinit var publicPeaceAdapter: PublicPeaceAdapter
+
+    private var allNewsItems: List<NewsItem> = emptyList()
+    private var selectedNewsTab = 0  // 0=생활불편, 1=안전불안, 2=신변위협
+    private var isNewsExpanded = false
+    private var isDataLoading = false
 
     companion object {
         fun newInstance(cardId: String): ExistingInfoFragment {
@@ -68,13 +76,16 @@ class ExistingInfoFragment : Fragment() {
         if (cardId.isEmpty()) return
 
         setupListeners()
+        setupPublicPeaceSection()
         updateTabUI()
-        //loadAllDataSafe()
     }
 
     override fun onResume() {
         super.onResume()
-        if (cardId.isNotEmpty()) {
+    }
+
+    fun refreshDataIfNeeded() {
+        if (cardId.isNotEmpty() && !isDataLoading) {
             loadAllDataSafe()
         }
     }
@@ -198,33 +209,35 @@ class ExistingInfoFragment : Fragment() {
             }
         }
 
-        when (mode) {
-            1 -> {
-                safeBinding.tvTransportInfo.visibility = if (transportMessage.isNotEmpty()) View.VISIBLE else View.GONE
-                safeBinding.tvTransportInfo.text = transportMessage
-            }
-            3 -> {
-                safeBinding.tvTransportInfo.visibility = if (bicycleMessage.isNotEmpty()) View.VISIBLE else View.GONE
-                safeBinding.tvTransportInfo.text = bicycleMessage
-            }
-            else -> safeBinding.tvTransportInfo.visibility = View.GONE
+        val isInfoVisible = when (mode) {
+            1 -> transportMessage.isNotEmpty()
+            3 -> bicycleMessage.isNotEmpty()
+            else -> false
         }
 
-        // ★ 3. 데이터가 없는 구간을 최단거리로, 이후 도보 시간으로 우선순위 정렬
+        safeBinding.tvTransportInfo.visibility = if (isInfoVisible) View.VISIBLE else View.GONE
+        safeBinding.tvTransportInfo.text = if (mode == 1) transportMessage else bicycleMessage
+
+        // ★ 직주거리 설명글이 보일 때 자동 스크롤 실행 (여백 억지 추가 삭제)
+        if (isInfoVisible) {
+            autoScrollToView(safeBinding.tvTransportInfo)
+        }
+
+        // 1. 시간이 0분인(서버에서 값이 없는) 데이터를 1순위로 정렬합니다.
         val sortedList = originalScheduleList.sortedWith(Comparator { a, b ->
             val timeA = when (mode) { 0 -> a.walkingTimeMin; 1 -> a.transitTimeMin; 2 -> a.carTimeMin; 3 -> a.bicycleTimeMin; else -> a.walkingTimeMin }
             val timeB = when (mode) { 0 -> b.walkingTimeMin; 1 -> b.transitTimeMin; 2 -> b.carTimeMin; 3 -> b.bicycleTimeMin; else -> b.walkingTimeMin }
 
             if (mode != 0) {
-                val aMissing = timeA <= 0
-                val bMissing = timeB <= 0
+                val aMissing = timeA == 0 // 0분인지 확인
+                val bMissing = timeB == 0 // 0분인지 확인
 
                 if (aMissing && bMissing) {
                     a.walkingTimeMin.compareTo(b.walkingTimeMin)
                 } else if (aMissing) {
-                    -1
+                    -1 // A가 0분이면 최상단으로 끌어올림
                 } else if (bMissing) {
-                    1
+                    1  // B가 0분이면 최상단으로 끌어올림
                 } else {
                     timeA.compareTo(timeB)
                 }
@@ -242,23 +255,171 @@ class ExistingInfoFragment : Fragment() {
         lengthAdapter.setMode(mode)
 
         val brand700 = ContextCompat.getColor(ctx, R.color.brand_700)
-        // 완벽하게 정렬된 리스트의 첫 번째 아이템이 1순위 (최단거리)
         val shortestItem = sortedList.firstOrNull()
 
         if (shortestItem != null) {
             val rank = shortestItem.rankLabel
-            val text = "직주거리는 $rank 가 \n가장 짧아요"
-            val spannable = SpannableString(text)
-            val idx = text.indexOf(rank)
-            if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            safeBinding.lengthRankTv.text = spannable
+            val time = when (mode) {
+                0 -> shortestItem.walkingTimeMin
+                1 -> shortestItem.transitTimeMin
+                2 -> shortestItem.carTimeMin
+                3 -> shortestItem.bicycleTimeMin
+                else -> shortestItem.walkingTimeMin
+            }
+
+            // 2. 도보가 아닌데 시간이 0분이면 "도보가 더 빨라요" 문구를 띄웁니다!
+            if (mode != 0 && time == 0) {
+                val text = "${rank}는 경로가 없어\n도보가 더 빨라요"
+                val spannable = SpannableString(text)
+                val idx = text.indexOf(rank)
+                if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                safeBinding.lengthRankTv.text = spannable
+            } else {
+                val text = "직주거리는 $rank 가 \n가장 짧아요"
+                val spannable = SpannableString(text)
+                val idx = text.indexOf(rank)
+                if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                safeBinding.lengthRankTv.text = spannable
+            }
         } else {
             safeBinding.lengthRankTv.text = "경로를 찾을 수 없어요"
         }
     }
 
+    private fun setupPublicPeaceSection() {
+        publicPeaceAdapter = PublicPeaceAdapter(emptyList())
+        binding.lengthPublicPeaceRv.layoutManager = LinearLayoutManager(requireContext())
+        binding.lengthPublicPeaceRv.adapter = publicPeaceAdapter
+
+        val ctx = requireContext()
+        val brandColor = ContextCompat.getColor(ctx, R.color.brand_700)
+        val grayColor = ContextCompat.getColor(ctx, R.color.gray_800)
+
+        binding.lifeBtn.setOnClickListener {
+            if (selectedNewsTab != 0) {
+                selectedNewsTab = 0
+                updateNewsTabTint(brandColor, grayColor, grayColor)
+                updateNewsFilter()
+            }
+        }
+        binding.safeBtn.setOnClickListener {
+            if (selectedNewsTab != 1) {
+                selectedNewsTab = 1
+                updateNewsTabTint(grayColor, brandColor, grayColor)
+                updateNewsFilter()
+            }
+        }
+        binding.oneselfBtn.setOnClickListener {
+            if (selectedNewsTab != 2) {
+                selectedNewsTab = 2
+                updateNewsTabTint(grayColor, grayColor, brandColor)
+                updateNewsFilter()
+            }
+        }
+
+        binding.monthLl.setOnClickListener {
+            isNewsExpanded = !isNewsExpanded
+            binding.lengthPublicPeaceRv.visibility = if (isNewsExpanded) View.VISIBLE else View.GONE
+            binding.arrowDownIv.rotation = if (isNewsExpanded) 180f else 0f
+        }
+    }
+
+    private fun updateNewsTabTint(lifeTint: Int, safeTint: Int, oneselfTint: Int) {
+        val b = _binding ?: return
+        b.lifeBtn.backgroundTintList = ColorStateList.valueOf(lifeTint)
+        b.safeBtn.backgroundTintList = ColorStateList.valueOf(safeTint)
+        b.oneselfBtn.backgroundTintList = ColorStateList.valueOf(oneselfTint)
+    }
+
+    private fun updateNewsFilter() {
+        val filtered = allNewsItems.filter { item ->
+            val level = item.categoryLevel
+            when (selectedNewsTab) {
+                0 -> level.contains("생활 불편") || level.contains("무질서")
+                1 -> level.contains("안전 불안")
+                2 -> level.contains("신변 위협") || level.contains("강력 범죄")
+                else -> false
+            }
+        }
+        Log.d(TAG_SAFETY, "뉴스 탭=$selectedNewsTab 필터 결과: ${filtered.size}개")
+        if (::publicPeaceAdapter.isInitialized) {
+            publicPeaceAdapter.updateItems(filtered)
+        }
+        if (filtered.isNotEmpty()) {
+            isNewsExpanded = true
+            _binding?.lengthPublicPeaceRv?.visibility = View.VISIBLE
+            _binding?.arrowDownIv?.rotation = 180f
+        }
+        updateNewsEmptyState(filtered.isEmpty())
+    }
+
+    private fun updateNewsEmptyState(isEmpty: Boolean) {
+        val b = _binding ?: return
+        if (isEmpty) {
+            b.monthTv.visibility = View.GONE
+            b.arrowDownIv.visibility = View.GONE
+            b.newsEmptyTv.visibility = View.VISIBLE
+            b.monthLl.isClickable = false
+            // 빈 상태면 접기
+            isNewsExpanded = false
+            b.lengthPublicPeaceRv.visibility = View.GONE
+            b.arrowDownIv.rotation = 0f
+        } else {
+            b.monthTv.visibility = View.VISIBLE
+            b.arrowDownIv.visibility = View.VISIBLE
+            b.newsEmptyTv.visibility = View.GONE
+            b.monthLl.isClickable = true
+        }
+    }
+
+    private fun loadNewsData() {
+        Log.d(TAG_SAFETY, "loadNewsData() 진입 - cardId=$cardId, context=${context != null}")
+        val ctx = context ?: run {
+            Log.e(TAG_SAFETY, "❌ loadNewsData() context null → 조기 종료")
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG_SAFETY, "========== 치안 뉴스 API 호출 시작 (CardID: $cardId) ==========")
+                val response = RetrofitClient.getInstance(ctx)
+                    .getAnalysisNews(cardId, period = 3, level = 3, page = 0)
+
+                Log.d(TAG_SAFETY, "치안 뉴스 응답 코드: ${response.code()}")
+
+                if (response.isSuccessful) {
+                    val body = response.body() ?: emptyList()
+                    Log.d(TAG_SAFETY, "치안 뉴스 총 그룹 수: ${body.size}")
+
+                    body.forEachIndexed { idx, newsResponse ->
+                        Log.d(TAG_SAFETY, "  [그룹 $idx] label=${newsResponse.label}, region=${newsResponse.regionName}, " +
+                                "totalCount=${newsResponse.totalCount}, newsCount=${newsResponse.news.size}")
+                        Log.d(TAG_SAFETY, "  level1Count=${newsResponse.level1Count}, level2Count=${newsResponse.level2Count}, level3Count=${newsResponse.level3Count}")
+                        newsResponse.news.forEachIndexed { nIdx, item ->
+                            Log.d(TAG_SAFETY, "    [뉴스 $nIdx] categoryLevel=${item.categoryLevel}, categoryTag=${item.categoryTag}, " +
+                                    "publishedAt=${item.publishedAt}, title=${item.title}")
+                            Log.d(TAG_SAFETY, "    summary=${item.summary}")
+                        }
+                    }
+
+                    allNewsItems = body.flatMap { it.news }
+                    Log.d(TAG_SAFETY, "치안 뉴스 합산 아이템 수: ${allNewsItems.size}")
+                    Log.d(TAG_SAFETY, "========== 치안 뉴스 API 호출 종료 ==========")
+
+                    val period = body.firstOrNull()?.period ?: 3
+                    _binding?.monthTv?.text = "${period}개월 이내"
+                    updateNewsFilter()
+                } else {
+                    Log.e(TAG_SAFETY, "❌ 치안 뉴스 API 실패: ${response.code()} ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG_SAFETY, "❌ 치안 뉴스 예외 발생: ${e.message}", e)
+            }
+        }
+    }
+
     private fun loadAllDataSafe() {
         val ctx = context ?: return
+        isDataLoading = true
         lifecycleScope.launch {
             _binding?.loadingLayout?.visibility = View.VISIBLE
             val service = RetrofitClient.getInstance(ctx)
@@ -274,10 +435,27 @@ class ExistingInfoFragment : Fragment() {
                 }
                 _binding?.lengthRankDesTv?.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
 
-                val distBody = try { service.getAnalysisDistance(cardId).body()?.firstOrNull() } catch (e: Exception) { null }
+                Log.d("API_DEBUG_DISTANCE", "========== 직주거리 데이터 로드 시작 (CardID: $cardId) ==========")
+                val distBody = try {
+                    service.getAnalysisDistance(cardId).body()?.firstOrNull()
+                } catch (e: Exception) {
+                    Log.e("API_DEBUG_DISTANCE", "거리 데이터 API 호출 에러", e)
+                    null
+                }
+
+                Log.d("API_DEBUG_DISTANCE", "서버 응답 Body 전체: $distBody")
+
                 transportMessage = distBody?.transportMessage ?: ""
                 bicycleMessage = distBody?.bicycleMessage ?: ""
+                Log.d("API_DEBUG_DISTANCE", "대중교통 메시지: $transportMessage")
+                Log.d("API_DEBUG_DISTANCE", "자전거 메시지: $bicycleMessage")
+
                 val distanceMap = distBody?.results?.associateBy { it.houseId } ?: emptyMap()
+
+                distanceMap.forEach { (houseId, dist) ->
+                    Log.d("API_DEBUG_DISTANCE", "[House ID: $houseId] 도보: ${dist.walkingTimeMin}분, 대중교통: ${dist.transitTimeMin}분, 자동차: ${dist.carTimeMin}분, 자전거: ${dist.bicycleTimeMin}분")
+                }
+                Log.d("API_DEBUG_DISTANCE", "========== 직주거리 데이터 로드 종료 ==========")
 
                 val lifeMap = try { service.getAnalysisLife(cardId).body()?.associateBy { it.houseId } ?: emptyMap() } catch (e: Exception) { emptyMap() }
 
@@ -358,15 +536,20 @@ class ExistingInfoFragment : Fragment() {
                     updateSafetySummaryText(safetyUiList)
                 }
 
+                loadNewsData()
+
             } catch (e: Exception) {
                 Log.e("ExistingInfo", "렌더링 에러", e)
+                isDataLoading = false
                 showErrorOverlay { loadAllDataSafe() }
             } finally {
+                isDataLoading = false
                 _binding?.loadingLayout?.visibility = View.GONE
             }
         }
     }
 
+    // [1] 소음 그래프 처리 부분
     private fun setupRecyclerViews(list: List<ScheduleItem>) {
         cardAdapter = ExistingInfoCardAdapter(list, onImageClick = { clickedItem, clickedIndex ->
             showImageDialog(clickedItem, clickedIndex)
@@ -374,17 +557,41 @@ class ExistingInfoFragment : Fragment() {
         _binding?.existingCardRv?.adapter = cardAdapter
 
         graphAdapter = GraphAdapter(list) { desc ->
-            _binding?.graphDetailTv?.visibility = if (desc.isNotEmpty()) View.VISIBLE else View.GONE
-            _binding?.graphDetailTv?.text = desc
+            if (desc.isNotEmpty()) {
+                _binding?.graphDetailTv?.visibility = View.VISIBLE
+                _binding?.graphDetailTv?.text = desc
+                // ★ 자동 스크롤 실행
+                _binding?.graphDetailTv?.let { autoScrollToView(it) }
+            } else {
+                _binding?.graphDetailTv?.visibility = View.GONE
+            }
         }
         _binding?.graphRv?.adapter = graphAdapter
         graphAdapter.setMode(isDayMode)
     }
 
+    // [2] 안전 그래프 처리 부분
+    private fun setupSafetyGraph(list: List<ScheduleItem>) {
+        _binding?.safetyGraphRv?.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        safetyGraphAdapter = GraphAdapter(list) { desc ->
+            if (desc.isNotEmpty()) {
+                _binding?.safetyGraphDetailTv?.visibility = View.VISIBLE
+                _binding?.safetyGraphDetailTv?.text = desc
+                // ★ 자동 스크롤 실행
+                _binding?.safetyGraphDetailTv?.let { autoScrollToView(it) }
+            } else {
+                _binding?.safetyGraphDetailTv?.visibility = View.GONE
+            }
+        }
+        _binding?.safetyGraphRv?.adapter = safetyGraphAdapter
+        safetyGraphAdapter.setMode(true)
+    }
+
     private fun showImageDialog(item: ScheduleItem, startIndex: Int) {
         if (item.imageList.isEmpty()) return
+        val ctx = context ?: return
 
-        val dialog = Dialog(requireContext())
+        val dialog = Dialog(ctx)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_after_image)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -416,41 +623,33 @@ class ExistingInfoFragment : Fragment() {
         val marginPx = dpToPx(4)
 
         for (i in 0 until dotCount) {
-            dots[i] = ImageView(requireContext()).apply {
+            dots[i] = ImageView(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
                     setMargins(marginPx, 0, marginPx, 0)
                 }
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     val colorRes = if (i == startIndex) R.color.brand_800 else R.color.gray_700
-                    setColor(ContextCompat.getColor(requireContext(), colorRes))
+                    setColor(ContextCompat.getColor(ctx, colorRes))
                 }
             }
             indicatorLl.addView(dots[i])
         }
 
-        imageVp.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+        val pageCallback = object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 for (i in 0 until dotCount) {
                     val drawable = dots[i]?.background as? GradientDrawable
                     val colorRes = if (i == position) R.color.brand_800 else R.color.gray_700
-                    drawable?.setColor(ContextCompat.getColor(requireContext(), colorRes))
+                    drawable?.setColor(ContextCompat.getColor(ctx, colorRes))
                 }
             }
-        })
+        }
+        imageVp.registerOnPageChangeCallback(pageCallback)
+        dialog.setOnDismissListener { imageVp.unregisterOnPageChangeCallback(pageCallback) }
 
         closeBtn.setOnClickListener { dialog.dismiss() }
         dialog.show()
-    }
-
-    private fun setupSafetyGraph(list: List<ScheduleItem>) {
-        _binding?.safetyGraphRv?.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        safetyGraphAdapter = GraphAdapter(list) { desc ->
-            _binding?.safetyGraphDetailTv?.visibility = if (desc.isNotEmpty()) View.VISIBLE else View.GONE
-            _binding?.safetyGraphDetailTv?.text = desc
-        }
-        _binding?.safetyGraphRv?.adapter = safetyGraphAdapter
-        safetyGraphAdapter.setMode(true)
     }
 
     private fun updateSafetySummaryText(list: List<ScheduleItem>) {
@@ -468,8 +667,8 @@ class ExistingInfoFragment : Fragment() {
     }
 
     private fun updateSummaries(list: List<ScheduleItem>) {
-        val bestDay = list.filter { it.dayScore > 0 }.maxByOrNull { it.dayScore }
-        val bestNight = list.filter { it.nightScore > 0 }.maxByOrNull { it.nightScore }
+        val bestDay = list.filter { it.dayScore > 0 }.minByOrNull { it.dayScore }
+        val bestNight = list.filter { it.nightScore > 0 }.minByOrNull { it.nightScore }
 
         val dayRank = bestDay?.rankLabel ?: "-"
         val nightRank = bestNight?.rankLabel ?: "-"
@@ -506,6 +705,33 @@ class ExistingInfoFragment : Fragment() {
                 }
             }
         }
+    }
+
+    // ★ 자동 스크롤 함수 (여백 강제 할당 없이 순수하게 뷰를 찾아 스크롤)
+    private fun autoScrollToView(targetView: View) {
+        targetView.postDelayed({
+            var parent = targetView.parent
+            while (parent != null) {
+                if (parent is androidx.core.widget.NestedScrollView) {
+                    val rect = android.graphics.Rect()
+                    targetView.getDrawingRect(rect)
+                    parent.offsetDescendantRectToMyCoords(targetView, rect)
+
+                    // 부모 스크롤뷰가 내려갈 수 있는 최대 한계치를 구합니다.
+                    val maxScrollY = parent.getChildAt(0).height - parent.height
+
+                    // 목표 위치를 계산하되, 스크롤의 최대 한계치를 넘지 않도록 안전장치를 겁니다.
+                    val targetY = (rect.bottom - parent.height + 100).coerceAtMost(maxScrollY)
+
+                    // 현재보다 더 아래에 내용이 있을 때만 스크롤을 내립니다.
+                    if (targetY > parent.scrollY) {
+                        parent.smoothScrollTo(0, targetY)
+                    }
+                    break
+                }
+                parent = parent.parent
+            }
+        }, 100)
     }
 
     override fun onDestroyView() {

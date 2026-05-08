@@ -112,27 +112,44 @@ class AfterLengthFragment : Fragment() {
             }
         }
 
-        when (mode) {
-            1 -> {
-                binding.tvTransportInfo.visibility = if (transportMessage.isNotEmpty()) View.VISIBLE else View.GONE
-                binding.tvTransportInfo.text = transportMessage
-            }
-            3 -> {
-                binding.tvTransportInfo.visibility = if (bicycleMessage.isNotEmpty()) View.VISIBLE else View.GONE
-                binding.tvTransportInfo.text = bicycleMessage
-            }
-            else -> binding.tvTransportInfo.visibility = View.GONE
+        val isInfoVisible = when (mode) {
+            1 -> transportMessage.isNotEmpty()
+            3 -> bicycleMessage.isNotEmpty()
+            else -> false
         }
 
-        // ★ 3. 데이터가 없는 구간을 최단거리로, 이후 도보 시간으로 우선순위 정렬
+        binding.tvTransportInfo.visibility = if (isInfoVisible) View.VISIBLE else View.GONE
+        binding.tvTransportInfo.text = if (mode == 1) transportMessage else bicycleMessage
+
+        if (isInfoVisible) {
+            binding.tvTransportInfo.postDelayed({
+                var parent = binding.tvTransportInfo.parent
+                while (parent != null) {
+                    if (parent is androidx.core.widget.NestedScrollView) {
+                        val rect = android.graphics.Rect()
+                        binding.tvTransportInfo.getDrawingRect(rect)
+                        parent.offsetDescendantRectToMyCoords(binding.tvTransportInfo, rect)
+
+                        val maxScrollY = parent.getChildAt(0).height - parent.height
+                        val targetY = (rect.bottom - parent.height + 100).coerceAtMost(maxScrollY)
+
+                        if (targetY > parent.scrollY) {
+                            parent.smoothScrollTo(0, targetY)
+                        }
+                        break
+                    }
+                    parent = parent.parent
+                }
+            }, 100)
+        }
+
         val sortedList = originalScheduleList.sortedWith(Comparator { a, b ->
             val timeA = when (mode) { 0 -> a.walkingTimeMin; 1 -> a.transitTimeMin; 2 -> a.carTimeMin; 3 -> a.bicycleTimeMin; else -> a.walkingTimeMin }
             val timeB = when (mode) { 0 -> b.walkingTimeMin; 1 -> b.transitTimeMin; 2 -> b.carTimeMin; 3 -> b.bicycleTimeMin; else -> b.walkingTimeMin }
 
             if (mode != 0) {
-                val aMissing = timeA <= 0
-                val bMissing = timeB <= 0
-
+                val aMissing = timeA == 0
+                val bMissing = timeB == 0
                 if (aMissing && bMissing) {
                     a.walkingTimeMin.compareTo(b.walkingTimeMin)
                 } else if (aMissing) {
@@ -151,18 +168,37 @@ class AfterLengthFragment : Fragment() {
         adapter.setMode(mode)
 
         val brand700 = ContextCompat.getColor(requireContext(), R.color.brand_700)
-        // 완벽하게 정렬된 리스트의 첫 번째 아이템이 1순위 (최단거리)
         val shortestItem = sortedList.firstOrNull()
 
         if (shortestItem != null) {
             val rank = shortestItem.rankLabel
-            val text = "직주거리는 $rank 가 \n가장 짧아요"
-            val spannable = SpannableString(text)
-            val idx = text.indexOf(rank)
-            if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            binding.afterLengthRankTv.text = spannable
+            val time = when (mode) {
+                0 -> shortestItem.walkingTimeMin
+                1 -> shortestItem.transitTimeMin
+                2 -> shortestItem.carTimeMin
+                3 -> shortestItem.bicycleTimeMin
+                else -> shortestItem.walkingTimeMin
+            }
+
+            if (mode != 0 && time == 0) {
+                val text = "${rank}는 경로가 없어\n도보가 더 빨라요"
+                val spannable = SpannableString(text)
+                val idx = text.indexOf(rank)
+                if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                binding.afterLengthRankTv.text = spannable
+            } else {
+                val text = "직주거리는 $rank 가 \n가장 짧아요"
+                val spannable = SpannableString(text)
+                val idx = text.indexOf(rank)
+                if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                binding.afterLengthRankTv.text = spannable
+            }
         }
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * requireContext().resources.displayMetrics.density).toInt()
+    }
 }

@@ -90,6 +90,7 @@ data class DirectionAnalysisResponse(
 //    val directionStatus : String,
 //    val lightStatus : String,
 //    val direction : Double,
+//    val direction : Double,
 //    val lightLevel : Double
 //)
 
@@ -358,4 +359,29 @@ data class UserMeResponse(
     val status: String,
     val createdAt: String,
     val updatedAt: String
+)
+
+// 치안 뉴스
+data class NewsResponse(
+    val label: String?,
+    val regionName: String?,
+    val period : Int = 0,
+    val level1Count: Int = 0,
+    val level2Count: Int = 0,
+    val level3Count: Int = 0,
+    val totalNewsCount : Int = 0,
+    val news: List<NewsItem> = emptyList(),
+    val page: Int = 0,
+    val size: Int = 0,
+    val totalCount: Int = 0,
+    val totalPages: Int = 0
+)
+
+data class NewsItem(
+    val title: String = "",
+    val categoryLevel: String = "",
+    val categoryTag: String = "",
+    val publishedAt: String = "",
+    val contentUrl: String = "",
+    val summary: String = ""
 )

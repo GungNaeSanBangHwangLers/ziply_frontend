@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var checklistAdapter: ChecklistGroupAdapter
 
     private var currentCardId: String = ""
+    private var targetUnmeasuredHouseId: Long = -1L // ★ 미측정된 집 번호를 저장할 변수 추가
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +39,10 @@ class MainActivity : AppCompatActivity() {
                 if (currentCardId.isNotEmpty()) {
                     val intent = Intent(this, IngExploreActivity::class.java)
                     intent.putExtra("CARD_ID", currentCardId)
+                    // ★ 찾아둔 미측정 집 번호가 있으면 같이 넘겨줌 (A가 안끝났으면 A, A가 끝났으면 B)
+                    if (targetUnmeasuredHouseId != -1L) {
+                        intent.putExtra("HOUSE_ID", targetUnmeasuredHouseId)
+                    }
                     intent.putExtra("SHOW_TAB", "MEASURE")
                     startActivity(intent)
                 }
@@ -48,10 +53,13 @@ class MainActivity : AppCompatActivity() {
 
         binding.emptyCardAddBtn.setOnClickListener { openAddressFragment() }
         binding.errorMainReloadBt.setOnClickListener { fetchMainData() }
+
+        binding.btnResetTop.setOnClickListener { resetData() }
+        binding.btnResetBottom.setOnClickListener { resetData() }
     }
 
     private fun initRecyclerViews() {
-        mainAdapter = MainCardRVAdapter(items = emptyList(), onItemClick =  { item, status ->
+        mainAdapter = MainCardRVAdapter(items = emptyList()) { item, status ->
             if (item.cardId == "DUMMY_PLUS_CARD") {
                 openAddressFragment()
                 return@MainCardRVAdapter
@@ -66,7 +74,7 @@ class MainActivity : AppCompatActivity() {
             }
             intent.putExtra("CARD_ID", item.cardId)
             startActivity(intent)
-        }, onDeleteResetClick = {resetData()})
+        }
         binding.mainExploreListRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.mainExploreListRv.adapter = mainAdapter
 
@@ -88,60 +96,46 @@ class MainActivity : AppCompatActivity() {
         fetchMainData()
     }
 
-    // ★ 수정된 초기화 API 호출 함수 (내 정보 조회 -> 초기화 순차 실행)
     private fun resetData() {
         lifecycleScope.launch {
             setViewState("LOADING")
             try {
                 val service = RetrofitClient.getInstance(this@MainActivity)
-
-                // ★ 1. 내 정보 조회 API 먼저 호출하여 유저 ID 획득!
                 val userMeResponse = service.getUserMe()
 
                 if (userMeResponse.isSuccessful && userMeResponse.body() != null) {
                     val currentUserId = userMeResponse.body()!!.id
-                    Log.d("API_RESET", "획득한 유저 ID: $currentUserId")
-
-                    // ★ 2. 방금 알아낸 ID를 헤더 파라미터로 넣어서 초기화 API 호출!
                     val resetResponse = service.resetData(currentUserId)
 
                     if (resetResponse.isSuccessful && resetResponse.body() != null) {
-                        val deletedStats = resetResponse.body()!!.deletedData
-                        Log.d("API_RESET", "초기화 성공: 카드 ${deletedStats.searchCards}개 삭제됨")
-
                         showCustomToast2("데이터가 초기화되었습니다.")
-
-                        // 초기화 성공 시 메인 데이터를 처음부터 다시 불러와 화면 갱신
                         fetchMainData()
                     } else {
-                        Log.e("API_RESET", "초기화 실패 코드: ${resetResponse.code()}")
                         showCustomToast("초기화에 실패했어요. 다시 시도해주세요.")
-                        setViewState("SUCCESS") // 로딩 바 숨기기
+                        setViewState("SUCCESS")
                     }
-
                 } else {
-                    Log.e("API_RESET", "유저 정보 획득 실패 코드: ${userMeResponse.code()}")
                     showCustomToast("유저 정보를 확인할 수 없어 초기화에 실패했습니다.")
-                    setViewState("SUCCESS") // 로딩 바 숨기기
+                    setViewState("SUCCESS")
                 }
 
             } catch (e: Exception) {
-                Log.e("API_RESET", "초기화 에러 발생", e)
                 setViewState("ERROR")
-                showErrorOverlay { resetData() } // 에러 오버레이 표시
+                showErrorOverlay { resetData() }
             }
         }
     }
+
     private fun fetchMainData() {
         lifecycleScope.launch {
             setViewState("LOADING")
             try {
                 val service = RetrofitClient.getInstance(this@MainActivity)
-                val nameDeferred = async { service.getUserName() }
-                val cardsDeferred = async { service.getReviewCards() }
-
-                val nameResponse = nameDeferred.await()
-                val cardsResponse = cardsDeferred.await()
+                val (nameResponse, cardsResponse) = coroutineScope {
+                    val nd = async { service.getUserName() }
+                    val cd = async { service.getReviewCards() }
+                    nd.await() to cd.await()
+                }
 
                 if (nameResponse.code() == 401 || cardsResponse.code() == 401) {
                     val tokenManager = TokenManager(this@MainActivity)
@@ -154,12 +148,25 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (nameResponse.isSuccessful && nameResponse.body() != null) {
-                    binding.mainHiTv.text = "안녕하세요 ${nameResponse.body()!!.name}님!"
+                    val userName = nameResponse.body()!!.name
+                    val prefix = "안녕하세요 "
+                    val fullText = "$prefix${userName}님!"
+
+                    val spannable = android.text.SpannableString(fullText)
+                    val startIndex = prefix.length
+                    if (startIndex != -1) {
+                        spannable.setSpan(
+                            android.text.style.ForegroundColorSpan(androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.brand_500)),
+                            startIndex,
+                            startIndex + userName.length,
+                            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
+                    binding.mainHiTv.text = spannable
                 }
 
                 if (cardsResponse.isSuccessful && cardsResponse.body() != null) {
                     val rawCards = cardsResponse.body()!!
-
                     val uniqueCards = rawCards.distinctBy { it.cardId }
 
                     if (uniqueCards.isEmpty()) {
@@ -168,7 +175,6 @@ class MainActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    // 1. 전체 탐색 개수 계산
                     val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Date())
                     var totalTodayCount = 0
                     uniqueCards.forEach { card ->
@@ -182,7 +188,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n${totalTodayCount}개 있어요"
 
-                    // 2. 카드 상태별 분기 (서버의 한글/영어 상태값을 내부 상태로 통일)
                     val mappedCards = getMappedCardDataWithAddress(uniqueCards)
                     val ingCards = mappedCards.filter { it.status == "ING" }
                     val afterCards = mappedCards.filter { it.status == "AFTER" }
@@ -196,7 +201,6 @@ class MainActivity : AppCompatActivity() {
                         binding.layoutEmptyCard.visibility = View.GONE
                         binding.bottomBtnContainer.visibility = View.VISIBLE
                         binding.mainPlusBtn.text = "오늘 할 일 바로가기"
-
                         currentCardId = finalDisplayList[0].cardId
 
                     } else if (afterCards.isNotEmpty()) {
@@ -206,7 +210,6 @@ class MainActivity : AppCompatActivity() {
                         binding.layoutEmptyCard.visibility = View.VISIBLE
                         binding.bottomBtnContainer.visibility = View.VISIBLE
                         binding.mainPlusBtn.text = "주거탐색 추가하기"
-
                         currentCardId = finalDisplayList[0].cardId
                     } else {
                         showEmptyStateAll()
@@ -216,18 +219,19 @@ class MainActivity : AppCompatActivity() {
 
                     mainAdapter.updateList(finalDisplayList)
 
-                    // 3. 체크리스트 데이터 연동
                     try {
                         val checklistRes = service.getChecklistDetails(currentCardId)
 
                         if (checklistRes.isSuccessful && checklistRes.body() != null) {
                             val body = checklistRes.body()!!
-
                             val hasValidData = body.any { it.houses != null && it.houses.isNotEmpty() }
 
                             if (hasValidData) {
                                 binding.mainChecklistRv.visibility = View.VISIBLE
                                 binding.tvEmptyChecklist.visibility = View.GONE
+
+                                binding.btnResetTop.visibility = View.GONE
+                                binding.btnResetBottom.visibility = View.VISIBLE
 
                                 val sortedChecklist = body.map { group ->
                                     val safeHouses = group.houses ?: emptyList()
@@ -241,15 +245,31 @@ class MainActivity : AppCompatActivity() {
                                         .thenBy { it.date ?: "" }
                                 )
                                 checklistAdapter.updateData(sortedChecklist)
+
+                                // ★ 핵심 1: '오늘의 할 일' 버튼을 눌렀을 때 넘어갈 주거지(가장 첫 번째 미측정 주거지) 미리 찾아두기
+                                targetUnmeasuredHouseId = -1L
+                                for (group in sortedChecklist) {
+                                    val unmeasuredHouse = group.houses?.find { !it.isMeasurementCompleted }
+                                    if (unmeasuredHouse != null) {
+                                        targetUnmeasuredHouseId = unmeasuredHouse.id
+                                        break // 찾았으면 반복문 즉시 탈출
+                                    }
+                                }
+
                             } else {
                                 showEmptyChecklistState()
+                                binding.btnResetTop.visibility = View.VISIBLE
+                                binding.btnResetBottom.visibility = View.GONE
                             }
                         } else {
                             showEmptyChecklistState()
+                            binding.btnResetTop.visibility = View.VISIBLE
+                            binding.btnResetBottom.visibility = View.GONE
                         }
                     } catch (e: Exception) {
-                        Log.e("MainActivity", "Checklist Error", e)
                         showEmptyChecklistState()
+                        binding.btnResetTop.visibility = View.VISIBLE
+                        binding.btnResetBottom.visibility = View.GONE
                     }
 
                     setViewState("SUCCESS")
@@ -258,7 +278,6 @@ class MainActivity : AppCompatActivity() {
                     showErrorOverlay { fetchMainData() }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Total Fetch Error", e)
                 setViewState("ERROR")
                 showErrorOverlay { fetchMainData() }
             }
@@ -271,23 +290,22 @@ class MainActivity : AppCompatActivity() {
         binding.bottomBtnContainer.visibility = View.GONE
         binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
         showEmptyChecklistState()
+
+        binding.btnResetTop.visibility = View.GONE
+        binding.btnResetBottom.visibility = View.GONE
     }
 
     private fun getStatusPriorityFromDate(dateString: String): Int {
         return try {
             val parts = dateString.split("~").map { it.trim() }
             if (parts.isEmpty()) return 2
-
             val startDateStr = parts[0]
             val endDateStr = if (parts.size > 1) parts[1] else startDateStr
-
             val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
             val todayFormat = SimpleDateFormat("yyyyMMdd", Locale.KOREA)
-
             val start = sdf.parse(startDateStr) ?: return 2
             val end = sdf.parse(endDateStr) ?: start
             val today = Date()
-
             val startInt = todayFormat.format(start).toInt()
             val endInt = todayFormat.format(end).toInt()
             val todayInt = todayFormat.format(today).toInt()
@@ -330,15 +348,13 @@ class MainActivity : AppCompatActivity() {
                     } catch (e: Exception) { }
 
                     val displayDate = if (minDateStr == maxDateStr) minDateStr else "$minDateStr ~ $maxDateStr"
-
-                    // ★ 핵심 변경 포인트: 백엔드에서 날아오는 상태값을 안전하게 앱 내부 상태(ING/AFTER)로 매핑합니다.
                     val rawStatus = card.status?.toString() ?: ""
                     val safeStatus = if (rawStatus.contains("예정") || rawStatus.contains("중") || rawStatus.contains("BEFORE") || rawStatus.contains("ING")) {
-                        "ING" // 탐색 예정, 탐색 중 -> 모두 앱 내부에서는 탐색 중(ING) 취급
+                        "ING"
                     } else if (rawStatus.contains("종료") || rawStatus.contains("완료") || rawStatus.contains("AFTER")) {
-                        "AFTER" // 탐색 종료 -> 앱 내부에서는 탐색 후(AFTER) 취급
+                        "AFTER"
                     } else {
-                        "ING" // 혹시 모를 알 수 없는 상태값이 오면 기본적으로 ING로 띄워줌
+                        "ING"
                     }
 
                     MainCardData(

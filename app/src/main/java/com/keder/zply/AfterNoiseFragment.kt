@@ -32,7 +32,6 @@ class AfterNoiseFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         loadNoiseData()
         setupDayNightButtons()
     }
@@ -45,42 +44,29 @@ class AfterNoiseFragment : Fragment() {
 
         lifecycleScope.launch {
             try {
-                // ★ 수정됨: getAnalysisScore -> getAnalysisLife (이전에 썼던 정확한 소음 API)
                 val response = RetrofitClient.getInstance(requireContext()).getAnalysisLife(cardId)
-
                 if (response.isSuccessful && response.body() != null) {
                     val lifeList = response.body()!!
-
-                    Log.d("API_AFTER_NOISE", "✅ [소음] 통신 성공! 갯수: ${lifeList.size}, 데이터: $lifeList")
-
-                    // ★ 수정됨: LifeResponse 형식에 맞춰서 매핑
                     val uiList = lifeList.map { life ->
                         ScheduleItem(
-                            houseId = life.houseId,
-                            address = "",
-                            time = "",
-                            dayScore = life.dayScore,      // 낮 소음 점수
-                            nightScore = life.nightScore,  // 밤 소음 점수
-                            dayDesc = life.message ?: "",  // 생활/소음 코멘트
-                            nightDesc = life.message ?: "",
-                            rankLabel = activity.getRankLabel(life.houseId) // A, B, C...
+                            houseId = life.houseId, address = "", time = "",
+                            dayScore = life.dayScore, nightScore = life.nightScore,
+                            dayDesc = life.message ?: "", nightDesc = life.message ?: "",
+                            rankLabel = activity.getRankLabel(life.houseId)
                         )
                     }.sortedBy { it.rankLabel }
 
                     if (uiList.isNotEmpty()) {
                         setupGraph(uiList)
                         updateNoiseSummaryText(uiList)
-                    } else {
-                        Log.w("API_AFTER_NOISE", "⚠️ [소음] 데이터가 0개입니다.")
                     }
-                } else {
-                    Log.e("API_AFTER_NOISE", "❌ [소음] 통신 실패! 코드: ${response.code()}")
                 }
             } catch (e: Exception) {
                 Log.e("API_AFTER_NOISE", "❌ [소음] 예외 발생: ${e.message}", e)
             }
         }
     }
+
     private fun setupGraph(list: List<ScheduleItem>) {
         binding.beforeGraphRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
@@ -90,16 +76,40 @@ class AfterNoiseFragment : Fragment() {
             } else {
                 binding.graphDetailTv.visibility = View.VISIBLE
                 binding.graphDetailTv.text = description
+                // ★ 자동 스크롤 실행
+                autoScrollToView(binding.graphDetailTv)
             }
         }
-        binding.beforeGraphRv.adapter = graphAdapter
         binding.beforeGraphRv.adapter = graphAdapter
         graphAdapter.setMode(isDayMode)
 
         val favoriteViewModel = ViewModelProvider(requireActivity())[FavoriteViewModel::class.java]
         favoriteViewModel.favoriteSet.observe(viewLifecycleOwner) { favorites ->
-            graphAdapter.updateFavorites(favorites) // 방향 탭은 adapter.updateFavorites(favorites)
+            graphAdapter.updateFavorites(favorites)
         }
+    }
+
+    // ★ 자동 스크롤 함수
+    private fun autoScrollToView(targetView: View) {
+        targetView.postDelayed({
+            var parent = targetView.parent
+            while (parent != null) {
+                if (parent is androidx.core.widget.NestedScrollView) {
+                    val rect = android.graphics.Rect()
+                    targetView.getDrawingRect(rect)
+                    parent.offsetDescendantRectToMyCoords(targetView, rect)
+
+                    val maxScrollY = parent.getChildAt(0).height - parent.height
+                    val targetY = (rect.bottom - parent.height + 100).coerceAtMost(maxScrollY)
+
+                    if (targetY > parent.scrollY) {
+                        parent.smoothScrollTo(0, targetY)
+                    }
+                    break
+                }
+                parent = parent.parent
+            }
+        }, 100) // 레이아웃이 그려질 시간을 0.1초 확보
     }
 
     private fun setupDayNightButtons() {
@@ -112,23 +122,16 @@ class AfterNoiseFragment : Fragment() {
                 isDayMode = true
                 binding.afterDayTv.backgroundTintList = ColorStateList.valueOf(blueColor)
                 binding.afterNightTv.backgroundTintList = ColorStateList.valueOf(grayColor)
-
-                if (::graphAdapter.isInitialized) {
-                    graphAdapter.setMode(true)
-                }
+                if (::graphAdapter.isInitialized) graphAdapter.setMode(true)
                 binding.graphDetailTv.visibility = View.GONE
             }
         }
-
         binding.afterNightTv.setOnClickListener {
             if (isDayMode) {
                 isDayMode = false
                 binding.afterDayTv.backgroundTintList = ColorStateList.valueOf(grayColor)
                 binding.afterNightTv.backgroundTintList = ColorStateList.valueOf(blueColor)
-
-                if (::graphAdapter.isInitialized) {
-                    graphAdapter.setMode(false)
-                }
+                if (::graphAdapter.isInitialized) graphAdapter.setMode(false)
                 binding.graphDetailTv.visibility = View.GONE
             }
         }
@@ -136,27 +139,17 @@ class AfterNoiseFragment : Fragment() {
 
     private fun updateNoiseSummaryText(list: List<ScheduleItem>) {
         if (list.isEmpty()) return
-
         val minDayItem = list.minByOrNull { it.dayScore }
         val minNightItem = list.minByOrNull { it.nightScore }
-
         val minDayRank = minDayItem?.rankLabel ?: "-"
         val minNightRank = minNightItem?.rankLabel ?: "-"
-
         val text = "낮에는 $minDayRank, 밤에는 $minNightRank 가 \n소음이 가장 낮아요."
         val spannable = SpannableString(text)
         val blueColor = ContextCompat.getColor(requireContext(), R.color.brand_600)
-
         val dayIndex = text.indexOf(minDayRank)
-        if (dayIndex != -1) {
-            spannable.setSpan(ForegroundColorSpan(blueColor), dayIndex, dayIndex + minDayRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-
+        if (dayIndex != -1) spannable.setSpan(ForegroundColorSpan(blueColor), dayIndex, dayIndex + minDayRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         val nightIndex = text.lastIndexOf(minNightRank)
-        if (nightIndex != -1) {
-            spannable.setSpan(ForegroundColorSpan(blueColor), nightIndex, nightIndex + minNightRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-
+        if (nightIndex != -1) spannable.setSpan(ForegroundColorSpan(blueColor), nightIndex, nightIndex + minNightRank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         binding.afterNoiseTv.text = spannable
     }
 

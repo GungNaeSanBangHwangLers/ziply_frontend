@@ -18,16 +18,5 @@
         android:textColor="@color/gray_400"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/delete_iv"
         app:layout_constraintBottom_toBottomOf="parent"/>
-
-    <ImageView
-        android:id="@+id/delete_iv"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_delete"
-        android:layout_marginStart="10dp"
-        app:layout_constraintStart_toEndOf="@id/tv_date"
-        app:layout_constraintTop_toTopOf="@id/tv_date"
-        app:layout_constraintBottom_toBottomOf="@id/tv_date"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

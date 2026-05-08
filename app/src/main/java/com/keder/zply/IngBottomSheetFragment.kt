@@ -125,32 +125,38 @@ class IngBottomSheetFragment : BottomSheetDialogFragment(), SensorEventListener 
     }
 
     private fun completeMeasurement() {
-        if (roomDataMap.isEmpty() || roomDataMap.values.all { it.isEmpty() }) {
+        // 1. 데이터가 하나라도 들어있는 방만 필터링합니다.
+        val validRooms = roomDataMap.filter { it.value.isNotEmpty() }
+
+        if (validRooms.isEmpty()) {
             showCustomToast("내용을 입력해주세요")
             return
+        }
+
+        // 2. 만약 만들어놓은 탭 개수보다, 실제로 데이터가 들어간 탭(방) 개수가 적다면 경고 메시지 출력
+        if (validRooms.size < roomDataMap.size) {
+            showCustomToast("측정값을 입력하지 않은 방은 저장에서 제외됐어요.")
         }
 
         val requestDataList = mutableListOf<DirectionRequest>()
         var roundCount = 1
 
-        // ★ 각 방(탭)별로 돌면서 데이터를 뭉칩니다.
-        roomDataMap.forEach { (roomIndex, measurements) ->
-            if (measurements.isNotEmpty()) {
-                val avgAzimuth = measurements.map { it.azimuth }.average() // Double로 처리
-                val roomName = roomNames[roomIndex] // 현재 탭의 방 이름 가져오기
+        // 3. 필터링된 "유효한 방" 데이터만 뭉쳐서 Request 리스트를 만듭니다.
+        validRooms.forEach { (roomIndex, measurements) ->
+            val avgAzimuth = measurements.map { it.azimuth }.average()
+            val roomName = roomNames[roomIndex]
 
-                // ★ [수정됨] 새 방향 DTO 규격 (windowLocation 추가, 방향은 Double)
-                requestDataList.add(
-                    DirectionRequest(
-                        round = roundCount,
-                        direction = avgAzimuth,
-                        windowLocation = roomName // "거실 정면", "방 1" 등
-                    )
+            requestDataList.add(
+                DirectionRequest(
+                    round = roundCount,
+                    direction = avgAzimuth,
+                    windowLocation = roomName
                 )
-                roundCount++
-            }
+            )
+            roundCount++
         }
 
+        // 4. 서버 전송 시작!
         sendMeasurementToBackend(requestDataList)
     }
 
@@ -160,13 +166,15 @@ class IngBottomSheetFragment : BottomSheetDialogFragment(), SensorEventListener 
         lifecycleScope.launch {
             try {
                 val service = RetrofitClient.getInstance(requireContext())
+
+                // ★ 스웨거 명세대로 각 방의 데이터를 1개씩(단일 객체) 개별 전송합니다!
                 val requests = measureList.map { request ->
-                    // ★ 함수명 주의: saveDirection (ApiService에 정의한 이름)
                     async { service.saveDirection(targetHouseId, request) }
                 }
-                val responses = requests.awaitAll()
-                var isAllSuccess = true
 
+                val responses = requests.awaitAll()
+
+                var isAllSuccess = true
                 responses.forEachIndexed { index, response ->
                     if (!response.isSuccessful) {
                         isAllSuccess = false
@@ -184,9 +192,10 @@ class IngBottomSheetFragment : BottomSheetDialogFragment(), SensorEventListener 
                     onComplete?.invoke(measureList.size)
                     dismiss()
                 } else {
-                    showCustomToast("측정 값을 입력하지 않은 방은 제외 됐어요.")
+                    showCustomToast("일부 데이터 등록에 실패했어요.")
                     binding.tmpDirectionOkMb.isEnabled = true
                 }
+
             } catch (e: Exception) {
                 Log.e("API_DIRECTION", "❌ 방향 전송 에러", e)
                 showCustomToast("등록에 실패했어요. 다시 시도해주세요")
@@ -194,6 +203,7 @@ class IngBottomSheetFragment : BottomSheetDialogFragment(), SensorEventListener 
             }
         }
     }
+
     private fun updateInputButtonState() {
         val hasData = roomDataMap[currentRoomIndex]?.isNotEmpty() == true
         binding.tmpDirectionInputMb.visibility = if (hasData) View.GONE else View.VISIBLE
@@ -230,7 +240,7 @@ class IngBottomSheetFragment : BottomSheetDialogFragment(), SensorEventListener 
         var azimuth = Math.toDegrees(orientationAngles[0].toDouble()).toInt()
         if (azimuth < 0) azimuth += 360
         currentAzimuth = azimuth
-        binding.tmpDirectionTv.text = "${currentAzimuth}°"
+        _binding?.tmpDirectionTv?.text = "${currentAzimuth}°"
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

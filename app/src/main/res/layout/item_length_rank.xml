@@ -35,6 +35,7 @@
             android:layout_height="wrap_content"
             tools:text="30분"
             android:textAppearance="@style/caption1_Semibold"
+            android:textColor="@color/white"
             android:layout_marginTop="6dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

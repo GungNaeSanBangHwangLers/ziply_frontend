@@ -21,6 +21,7 @@ import com.naver.maps.map.MapFragment
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -245,14 +246,20 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
             var finalLifeMap: Map<Long, LifeResponse>? = null
             var finalSafetyList: List<SafetyResponse>? = null
 
-            while (retryCount < maxRetries) {
+            while (retryCount < maxRetries && isActive) {
                 try {
-                    val hResResponse = service.getCardHouseList(currentCardId)
+                    val hDeferred = async { service.getCardHouseList(currentCardId) }
+                    val dDeferred = async { service.getAnalysisDistance(currentCardId) }
+                    val lDeferred = async { service.getAnalysisLife(currentCardId) }
+                    val sDeferred = async { service.getAnalysisSafety(currentCardId) }
+
+                    val hResResponse = hDeferred.await()
                     val hRes = hResResponse.body()
 
                     val isCardDeleted = hResResponse.code() == 404 || (hResResponse.isSuccessful && hRes != null && hRes.isEmpty())
 
                     if (isReload && isCardDeleted) {
+                        dDeferred.cancel(); lDeferred.cancel(); sDeferred.cancel()
                         binding.loadingLayout.visibility = View.GONE
                         showCustomToast2("해당 탐색 스케줄에 대한 모든 일정이 삭제됐습니다.")
                         goBackToMain()
@@ -261,7 +268,7 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     if (!hRes.isNullOrEmpty()) finalHouses = hRes
 
-                    val dResList = service.getAnalysisDistance(currentCardId).body()
+                    val dResList = dDeferred.await().body()
                     val dRes = dResList?.firstOrNull()
                     if (dRes != null && !dRes.results.isNullOrEmpty()) {
                         transportMessage = dRes.transportMessage ?: ""
@@ -269,10 +276,10 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
                         finalDistanceMap = dRes.results.associateBy { it.houseId }
                     }
 
-                    val lRes = service.getAnalysisLife(currentCardId).body()
+                    val lRes = lDeferred.await().body()
                     if (!lRes.isNullOrEmpty()) finalLifeMap = lRes.associateBy { it.houseId }
 
-                    val sRes = service.getAnalysisSafety(currentCardId).body()
+                    val sRes = sDeferred.await().body()
                     if (!sRes.isNullOrEmpty()) finalSafetyList = sRes
 
                     val targetHouseCount = finalHouses?.size ?: 0
@@ -302,54 +309,52 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun renderUI(houses: List<HouseResponse>, distMap: Map<Long, DistanceResult>?, lifeMap: Map<Long, LifeResponse>?, safetyList: List<SafetyResponse>?) {
+    private suspend fun renderUI(houses: List<HouseResponse>, distMap: Map<Long, DistanceResult>?, lifeMap: Map<Long, LifeResponse>?, safetyList: List<SafetyResponse>?) {
         val service = RetrofitClient.getInstance(this)
-        lifecycleScope.launch {
-            var companyAddr = "직장 정보 없음"
-            try {
-                val addrRes = service.getCardAddresses(currentCardId)
-                if (addrRes.isSuccessful && !addrRes.body().isNullOrEmpty()) companyAddr = addrRes.body()!![0].address ?: ""
-                val mapRes = service.getCardMapInfo(currentCardId)
-                if (mapRes.isSuccessful && mapRes.body() != null) {
-                    mapInfoList = mapRes.body()!!
-                    drawMarkersIfReady()
-                }
-            } catch (e: Exception) {}
+        var companyAddr = "직장 정보 없음"
+        try {
+            val addrRes = service.getCardAddresses(currentCardId)
+            if (addrRes.isSuccessful && !addrRes.body().isNullOrEmpty()) companyAddr = addrRes.body()!![0].address ?: ""
+            val mapRes = service.getCardMapInfo(currentCardId)
+            if (mapRes.isSuccessful && mapRes.body() != null) {
+                mapInfoList = mapRes.body()!!
+                drawMarkersIfReady()
+            }
+        } catch (e: Exception) {}
 
-            binding.beforeMyAddressTv.text = companyAddr
-            binding.beforeLengthRankDesTv.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
+        binding.beforeMyAddressTv.text = companyAddr
+        binding.beforeLengthRankDesTv.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
 
-            originalScheduleList = houses.map { house ->
-                val dist = distMap?.get(house.houseId)
-                val life = lifeMap?.get(house.houseId)
+        originalScheduleList = houses.map { house ->
+            val dist = distMap?.get(house.houseId)
+            val life = lifeMap?.get(house.houseId)
+            ScheduleItem(
+                houseId = house.houseId, address = house.address ?: "",
+                // ★ 서버에서 온 T 제거 및 포맷팅 (초 자르기)
+                time = house.visitTime?.replace("T", " ")?.take(16) ?: "", rankLabel = house.label ?: "?",
+                walkingTimeMin = dist?.walkingTimeMin ?: 0, walkingDistanceKm = dist?.walkingDistanceKm ?: 0.0,
+                transitTimeMin = dist?.transitTimeMin ?: 0, transitPayment = dist?.transitPaymentStr ?: "",
+                carTimeMin = dist?.carTimeMin ?: 0, bicycleTimeMin = dist?.bicycleTimeMin ?: 0,
+                dayScore = life?.dayScore ?: 0, nightScore = life?.nightScore ?: 0,
+                dayDesc = life?.message ?: "", nightDesc = life?.message ?: ""
+            )
+        }.sortedBy { it.rankLabel }
+
+        setupRecyclerViews(originalScheduleList)
+        updateSummaries(originalScheduleList)
+        updateTransportUI(0)
+
+        safetyList?.let { list ->
+            val safetyUiList = list.map { s ->
                 ScheduleItem(
-                    houseId = house.houseId, address = house.address ?: "",
-                    // ★ 서버에서 온 T 제거 및 포맷팅 (초 자르기)
-                    time = house.visitTime?.replace("T", " ")?.take(16) ?: "", rankLabel = house.label ?: "?",
-                    walkingTimeMin = dist?.walkingTimeMin ?: 0, walkingDistanceKm = dist?.walkingDistanceKm ?: 0.0,
-                    transitTimeMin = dist?.transitTimeMin ?: 0, transitPayment = dist?.transitPaymentStr ?: "",
-                    carTimeMin = dist?.carTimeMin ?: 0, bicycleTimeMin = dist?.bicycleTimeMin ?: 0,
-                    dayScore = life?.dayScore ?: 0, nightScore = life?.nightScore ?: 0,
-                    dayDesc = life?.message ?: "", nightDesc = life?.message ?: ""
+                    houseId = s.houseId, address = "", time = "",
+                    dayScore = s.safetyScore, nightScore = 0,
+                    dayDesc = s.message ?: "CCTV ${s.cctvCount}대 · 가로등 ${s.streetlightCount}개 · 치안시설 ${s.policeCount}곳",
+                    rankLabel = originalScheduleList.find { it.houseId == s.houseId }?.rankLabel ?: "?"
                 )
             }.sortedBy { it.rankLabel }
-
-            setupRecyclerViews(originalScheduleList)
-            updateSummaries(originalScheduleList)
-            updateTransportUI(0)
-
-            safetyList?.let { list ->
-                val safetyUiList = list.map { s ->
-                    ScheduleItem(
-                        houseId = s.houseId, address = "", time = "",
-                        dayScore = s.safetyScore, nightScore = 0,
-                        dayDesc = s.message ?: "CCTV ${s.cctvCount}대 · 가로등 ${s.streetlightCount}개 · 치안시설 ${s.policeCount}곳",
-                        rankLabel = originalScheduleList.find { it.houseId == s.houseId }?.rankLabel ?: "?"
-                    )
-                }.sortedBy { it.rankLabel }
-                setupSafetyGraph(safetyUiList)
-                updateSafetySummaryText(safetyUiList)
-            }
+            setupSafetyGraph(safetyUiList)
+            updateSafetySummaryText(safetyUiList)
         }
     }
 
@@ -432,8 +437,8 @@ class BeforeExploreActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateSummaries(list: List<ScheduleItem>) {
-        val bestDay = list.filter { it.dayScore > 0 }.maxByOrNull { it.dayScore }
-        val bestNight = list.filter { it.nightScore > 0 }.maxByOrNull { it.nightScore }
+        val bestDay = list.filter { it.dayScore > 0 }.minByOrNull { it.dayScore }
+        val bestNight = list.filter { it.nightScore > 0 }.minByOrNull { it.nightScore }
         val dayRank = bestDay?.rankLabel ?: "-"
         val nightRank = bestNight?.rankLabel ?: "-"
         val brandColor = ContextCompat.getColor(this, R.color.brand_700)

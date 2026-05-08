@@ -50,6 +50,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="서울특별시 동동시 \n동동로 50길 333-333"
+        android:lines="2"
+        android:ellipsize="end"
         android:textAppearance="@style/caption1_Semibold"
         app:layout_constraintStart_toStartOf="@id/explore_date_tv"
         app:layout_constraintTop_toBottomOf="@id/explore_date_tv"/>

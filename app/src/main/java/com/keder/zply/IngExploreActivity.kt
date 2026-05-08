@@ -25,7 +25,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.keder.zply.databinding.ActivityIngExploreBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -36,6 +38,8 @@ import java.util.Date
 import java.util.Locale
 
 class IngExploreActivity : AppCompatActivity() {
+
+    private var isMeasureTabActive = true
 
     private lateinit var binding: ActivityIngExploreBinding
     private var currentScheduleList: MutableList<ScheduleItem> = mutableListOf()
@@ -127,7 +131,7 @@ class IngExploreActivity : AppCompatActivity() {
                     val existingInfoFragment = ExistingInfoFragment.newInstance(cardId)
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.existing_info_container, existingInfoFragment, "EXISTING_INFO")
-                        .commit()
+                        .commitNow()
                 } catch (e: Exception) { }
             }
 
@@ -167,16 +171,24 @@ class IngExploreActivity : AppCompatActivity() {
         val unselectedColor = Color.TRANSPARENT
 
         binding.btn1.setOnClickListener {
+            isMeasureTabActive = true
             binding.btn1.backgroundTintList = ColorStateList.valueOf(selectedColor)
             binding.btn2.backgroundTintList = ColorStateList.valueOf(unselectedColor)
             binding.measureScrollView.visibility = View.VISIBLE
             binding.existingInfoContainer.visibility = View.GONE
+
+            updateStepsUI(currentHouseIndex)
         }
         binding.btn2.setOnClickListener {
-            binding.btn2.backgroundTintList = ColorStateList.valueOf(selectedColor)
+            isMeasureTabActive = false
             binding.btn1.backgroundTintList = ColorStateList.valueOf(unselectedColor)
+            binding.btn2.backgroundTintList = ColorStateList.valueOf(selectedColor)
             binding.measureScrollView.visibility = View.GONE
             binding.existingInfoContainer.visibility = View.VISIBLE
+
+            stopAutoLightMeasurement()
+            val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
+            existingInfoFragment?.refreshDataIfNeeded()
         }
     }
 
@@ -226,23 +238,20 @@ class IngExploreActivity : AppCompatActivity() {
 
                 currentScheduleList = detailList.sortedBy { it.rankLabel }.toMutableList()
 
-                // ★ 시작 주거지 세팅 로직
+                // ★ 인텐트로 넘어온 집이 있는지 가장 먼저 확인
                 val targetHouseId = intent.getLongExtra("HOUSE_ID", -1L)
                 val showTab = intent.getStringExtra("SHOW_TAB")
 
                 if (targetHouseId != -1L) {
-                    // 특정 주거지를 눌러서 들어온 경우
                     currentHouseIndex = currentScheduleList.indexOfFirst { it.houseId == targetHouseId }
                     if (currentHouseIndex == -1) currentHouseIndex = 0
                 } else {
-                    // 상단 카드 클릭 등 일반적인 진입: 첫 번째 미측정 주거지 찾기
                     val unmeasuredIndex = currentScheduleList.indexOfFirst {
                         it.measuredLightLux < 0f || it.measuredRoomCount <= 0 || it.imageList.isEmpty()
                     }
                     if (unmeasuredIndex != -1) {
                         currentHouseIndex = unmeasuredIndex
                     } else {
-                        // 모든 주거지가 측정 완료되었다면 자동으로 After 화면으로 이동
                         val intent = Intent(this@IngExploreActivity, AfterExploreActivity::class.java)
                         intent.putExtra("CARD_ID", cardId)
                         startActivity(intent)
@@ -251,7 +260,6 @@ class IngExploreActivity : AppCompatActivity() {
                     }
                 }
 
-                // 지정된 탭 활성화
                 if (showTab == "INFO") {
                     binding.btn2.performClick()
                 } else {
@@ -270,7 +278,6 @@ class IngExploreActivity : AppCompatActivity() {
         }
     }
 
-    // ★ 단일 주거 정보 UI 업데이트 함수
     private fun updateHouseUI() {
         if (currentHouseIndex !in currentScheduleList.indices) return
         val item = currentScheduleList[currentHouseIndex]
@@ -311,7 +318,9 @@ class IngExploreActivity : AppCompatActivity() {
             setStepStyleSafe(binding.step1Num, binding.step1Title, binding.step1Desc, binding.step1Btn, true, "측정완료")
         } else {
             setStepStyleSafe(binding.step1Num, binding.step1Title, binding.step1Desc, binding.step1Btn, false, "측정중...")
-            startAutoLightMeasurement(position)
+            if (isMeasureTabActive) {
+                startAutoLightMeasurement(position)
+            }
         }
 
         if (item.measuredRoomCount > 0) {
@@ -350,7 +359,7 @@ class IngExploreActivity : AppCompatActivity() {
         } catch (e: Exception) {}
     }
 
-    // ★ 현재 주거의 측정이 모두 끝났는지 확인하고, 다음으로 자동 이동하는 함수
+    // ★ 핵심 2: 모든 조건이 충족됐을 때 릴레이로 무조건 넘겨버리기
     private fun checkAndMoveToNextHouse() {
         if (currentHouseIndex !in currentScheduleList.indices) return
         val item = currentScheduleList[currentHouseIndex]
@@ -358,17 +367,20 @@ class IngExploreActivity : AppCompatActivity() {
         val isFullyMeasured = item.measuredLightLux >= 0f && item.measuredRoomCount > 0 && item.imageList.isNotEmpty()
 
         if (isFullyMeasured) {
+            // 지금 집은 다 끝났으니, 리스트 전체를 뒤져서 단 하나라도 안 된 집이 있는지 색출
             val nextIndex = currentScheduleList.indexOfFirst {
                 it.measuredLightLux < 0f || it.measuredRoomCount <= 0 || it.imageList.isEmpty()
             }
 
             if (nextIndex != -1) {
+                // 아직 남은 집이 있다! -> 그 집으로 강제 새로고침
                 showCustomToast2("현재 집의 측정을 모두 완료하여 다음 집으로 이동합니다.")
                 stopAutoLightMeasurement()
                 currentHouseIndex = nextIndex
                 updateHouseUI()
                 updateStepsUI(currentHouseIndex)
             } else {
+                // 와! 드디어 모든 집이 다 끝났다! -> 애프터로 사출!
                 showCustomToast2("모든 집의 측정을 완료했습니다. 결과 화면으로 이동합니다.")
                 val intent = Intent(this, AfterExploreActivity::class.java)
                 intent.putExtra("CARD_ID", cardId)
@@ -383,6 +395,7 @@ class IngExploreActivity : AppCompatActivity() {
             binding.step1Btn.text = "센서 없음"
             return
         }
+        stopAutoLightMeasurement()
         lightSensorListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
@@ -416,7 +429,7 @@ class IngExploreActivity : AppCompatActivity() {
 
                     if (currentHouseIndex == position) {
                         updateStepsUI(position)
-                        checkAndMoveToNextHouse() // 자동 검사
+                        checkAndMoveToNextHouse()
                     }
 
                     val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
@@ -452,7 +465,7 @@ class IngExploreActivity : AppCompatActivity() {
                 if (roomCount > 0) {
                     currentScheduleList[currentHouseIndex].measuredRoomCount = roomCount
                     updateStepsUI(currentHouseIndex)
-                    checkAndMoveToNextHouse() // 자동 검사
+                    checkAndMoveToNextHouse()
 
                     val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
                     existingInfoFragment?.updateMeasurementLocal(houseId = houseId, roomCount = roomCount)
@@ -477,7 +490,7 @@ class IngExploreActivity : AppCompatActivity() {
         lifecycleScope.launch {
             var tempCompressedFile: File? = null
             try {
-                tempCompressedFile = getCompressedImageFile(file)
+                tempCompressedFile = withContext(Dispatchers.IO) { getCompressedImageFile(file) }
                 val service = RetrofitClient.getInstance(this@IngExploreActivity)
                 val requestFile = tempCompressedFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val imagePart = MultipartBody.Part.createFormData("images", tempCompressedFile.name, requestFile)
@@ -493,13 +506,11 @@ class IngExploreActivity : AppCompatActivity() {
 
                     if (currentHouseIndex == position) {
                         updateStepsUI(position)
-                        checkAndMoveToNextHouse() // 자동 검사
+                        checkAndMoveToNextHouse()
                     }
 
                     val existingInfoFragment = supportFragmentManager.findFragmentByTag("EXISTING_INFO") as? ExistingInfoFragment
                     existingInfoFragment?.updateMeasurementLocal(houseId = houseId, newImagePath = absolutePath)
-
-                    showCustomToast2("사진이 추가되었습니다.")
                 } else {
                     showCustomToast("사진 등록에 실패했어요.")
                 }
@@ -532,10 +543,10 @@ class IngExploreActivity : AppCompatActivity() {
         val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath, options)
 
         val compressedFile = File(cacheDir, "temp_up_${System.currentTimeMillis()}.jpg")
-        val out = java.io.FileOutputStream(compressedFile)
-        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
-        out.flush()
-        out.close()
+        java.io.FileOutputStream(compressedFile).use { out ->
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+            out.flush()
+        }
         bitmap.recycle()
 
         return compressedFile

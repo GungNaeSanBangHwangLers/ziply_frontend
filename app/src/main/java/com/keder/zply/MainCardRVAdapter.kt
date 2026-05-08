@@ -1,53 +1,47 @@
 package com.keder.zply
 
-import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.keder.zply.databinding.ItemChecklistGroupBinding
 import com.keder.zply.databinding.ItemChecklistHouseBinding
 import com.keder.zply.databinding.ItemMainCardBinding
 import com.keder.zply.databinding.ItemMainPlusBinding
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MainCardRVAdapter(
     private var items: List<MainCardData>,
-    private val onItemClick: (MainCardData, ExploreStatus) -> Unit,
-    private val onDeleteResetClick : () -> Unit
+    private val onItemClick: (MainCardData, ExploreStatus) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    // 뷰 타입을 구분하기 위한 상수
     companion object {
         private const val VIEW_TYPE_NORMAL = 0
         private const val VIEW_TYPE_PLUS = 1
     }
 
     fun updateList(newItems: List<MainCardData>) {
+        val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize() = items.size
+            override fun getNewListSize() = newItems.size
+            override fun areItemsTheSame(oldPos: Int, newPos: Int) =
+                items[oldPos].cardId == newItems[newPos].cardId
+            override fun areContentsTheSame(oldPos: Int, newPos: Int) =
+                items[oldPos] == newItems[newPos]
+        })
         this.items = newItems
-        notifyDataSetChanged()
+        diff.dispatchUpdatesTo(this)
     }
 
-    // ★ 1. 아이템의 상태가 "PLUS_BTN"이면 다른 뷰 타입을 반환합니다.
     override fun getItemViewType(position: Int): Int {
-        return if (items[position].status == "PLUS_BTN") {
-            VIEW_TYPE_PLUS
-        } else {
-            VIEW_TYPE_NORMAL
-        }
+        return if (items[position].status == "PLUS_BTN") VIEW_TYPE_PLUS else VIEW_TYPE_NORMAL
     }
 
-    // ★ 2. 뷰 타입에 따라 다른 XML(Binding)을 연결해 줍니다.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return if (viewType == VIEW_TYPE_PLUS) {
-            // 플러스 버튼 카드 (item_main_plus.xml)
             val binding = ItemMainPlusBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             PlusViewHolder(binding)
         } else {
-            // 일반 탐색 카드 (item_main_card.xml)
             val binding = ItemMainCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             NormalViewHolder(binding)
         }
@@ -64,11 +58,9 @@ class MainCardRVAdapter(
 
     override fun getItemCount(): Int = items.size
 
-    // 일반 카드를 처리하는 뷰홀더
     inner class NormalViewHolder(private val binding: ItemMainCardBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: MainCardData) {
             binding.tvDate.text = item.date
-            // ★ XML 구조에 맞게 데이터 바인딩
             binding.tvLocation.text = "현재 ${item.location} 인근"
             binding.tvCountDesc.text = "${item.count}개 주거를 탐색 중이에요"
 
@@ -79,17 +71,12 @@ class MainCardRVAdapter(
         }
     }
 
-    // 플러스 버튼 카드를 처리하는 뷰홀더
     inner class PlusViewHolder(private val binding: ItemMainPlusBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: MainCardData) {
-            binding.tvDate.setOnClickListener {
+            binding.root.setOnClickListener {
                 onItemClick(item, ExploreStatus.ING)
             }
-            binding.deleteIv.setOnClickListener {
-                onDeleteResetClick()
-            }
         }
-
     }
 }
 
@@ -112,6 +99,7 @@ class ChecklistGroupAdapter(private var groups: List<ChecklistGroupResponse>,
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GroupViewHolder {
         val binding = ItemChecklistGroupBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        binding.rvGroupHouses.layoutManager = LinearLayoutManager(parent.context)
         return GroupViewHolder(binding)
     }
 
@@ -126,9 +114,12 @@ class ChecklistGroupAdapter(private var groups: List<ChecklistGroupResponse>,
             holder.binding.tvGroupDate.text = group.date
         }
 
-        val houseAdapter = ChecklistHouseAdapter(group.houses, onHouseClick)
-        holder.binding.rvGroupHouses.layoutManager = LinearLayoutManager(holder.binding.root.context)
-        holder.binding.rvGroupHouses.adapter = houseAdapter
+        val existing = holder.binding.rvGroupHouses.adapter as? ChecklistHouseAdapter
+        if (existing != null) {
+            existing.updateHouses(group.houses)
+        } else {
+            holder.binding.rvGroupHouses.adapter = ChecklistHouseAdapter(group.houses, onHouseClick)
+        }
     }
 
     override fun getItemCount() = groups.size
@@ -138,8 +129,13 @@ class ChecklistGroupAdapter(private var groups: List<ChecklistGroupResponse>,
 // ==========================================
 // 3. 하단 체크리스트 하우스 어댑터 (집 목록 표시용)
 // ==========================================
-class ChecklistHouseAdapter(private val houses: List<ChecklistHouseResponse>,
+class ChecklistHouseAdapter(private var houses: List<ChecklistHouseResponse>,
                             private val onHouseClick: (ChecklistHouseResponse) -> Unit) : RecyclerView.Adapter<ChecklistHouseAdapter.HouseViewHolder>() {
+
+    fun updateHouses(newHouses: List<ChecklistHouseResponse>) {
+        this.houses = newHouses
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HouseViewHolder {
         val binding = ItemChecklistHouseBinding.inflate(LayoutInflater.from(parent.context), parent, false)

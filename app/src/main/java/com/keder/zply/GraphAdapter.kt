@@ -20,15 +20,20 @@ class GraphAdapter(
     private var favoriteSet: Set<Long> = emptySet()
 
     fun updateFavorites(newSet: Set<Long>) {
+        val oldSet = this.favoriteSet
         this.favoriteSet = newSet
-        notifyDataSetChanged()
+        items.forEachIndexed { i, item ->
+            if (oldSet.contains(item.houseId) != newSet.contains(item.houseId)) {
+                notifyItemChanged(i)
+            }
+        }
     }
 
     fun setMode(isDay: Boolean) {
         this.isDayMode = isDay
         selectedPosition = -1
         onItemClick("")
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, items.size)
     }
 
     inner class ViewHolder(val binding: ItemGraphBarBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -101,14 +106,18 @@ class GraphAdapter(
             }
 
             binding.root.setOnClickListener {
-                if (selectedPosition == position) {
+                val currentPos = bindingAdapterPosition
+                if (currentPos == RecyclerView.NO_POSITION) return@setOnClickListener
+                val prev = selectedPosition
+                if (selectedPosition == currentPos) {
                     selectedPosition = -1
                     onItemClick("")
                 } else {
-                    selectedPosition = position
+                    selectedPosition = currentPos
                     onItemClick("[$rankChar] $desc")
                 }
-                notifyDataSetChanged()
+                if (prev != -1) notifyItemChanged(prev)
+                if (selectedPosition != -1) notifyItemChanged(selectedPosition)
             }
         }
     }

@@ -356,6 +356,124 @@
                     android:visibility="gone"
                     app:layout_constraintTop_toBottomOf="@id/safety_graph_rv"/>
             </androidx.constraintlayout.widget.ConstraintLayout>
+            <TextView
+                android:id="@+id/public_peace_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="동네의 치안 정보를 \n알려드려요"
+                android:textAppearance="@style/body1_Semibold"
+                android:textColor="@color/white"
+                android:layout_marginTop="40dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/safety_graph_container"/>
+
+            <TextView
+                android:id="@+id/public_peace_desc_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="최근 뉴스들을 기반으로 정보를 알려드릴게요."
+                android:textAppearance="@style/caption1_Median"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/public_peace_tv"/>
+
+            <TextView
+                android:id="@+id/life_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="생활 불편"
+                android:textAppearance="@style/caption1_Semibold"
+                android:textColor="@color/white"
+                android:paddingVertical="10dp"
+                android:paddingHorizontal="16dp"
+                android:background="@drawable/gray_bg20"
+                android:backgroundTint="@color/brand_700"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/public_peace_desc_tv"/>
+
+            <TextView
+                android:id="@+id/safe_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="10dp"
+                android:text="안전 불안"
+                android:textAppearance="@style/caption1_Semibold"
+                android:textColor="@color/white"
+                android:paddingVertical="10dp"
+                android:paddingHorizontal="16dp"
+                android:background="@drawable/gray_bg20"
+                android:backgroundTint="@color/gray_800"
+                app:layout_constraintStart_toEndOf="@id/life_btn"
+                app:layout_constraintTop_toBottomOf="@id/public_peace_desc_tv"/>
+
+            <TextView
+                android:id="@+id/oneself_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="10dp"
+                android:text="신변 위협"
+                android:textAppearance="@style/caption1_Semibold"
+                android:textColor="@color/white"
+                android:paddingVertical="10dp"
+                android:paddingHorizontal="16dp"
+                android:background="@drawable/gray_bg20"
+                android:backgroundTint="@color/gray_800"
+                app:layout_constraintStart_toEndOf="@id/safe_btn"
+                app:layout_constraintTop_toBottomOf="@id/public_peace_desc_tv"/>
+
+            <LinearLayout
+                android:id="@+id/month_ll"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/oneself_btn"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:backgroundTint="@color/gray_900"
+                android:background="@drawable/gray_bg16"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:id="@+id/month_tv"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="N개월 이내"
+                    android:textAppearance="@style/caption1_Semibold"
+                    android:textColor="@color/white"/>
+
+                <ImageView
+                    android:id="@+id/arrow_down_iv"
+                    android:layout_width="12dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_arrow_down"/>
+
+                <TextView
+                    android:id="@+id/news_empty_tv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="관련 뉴스 정보가 없습니다."
+                    android:textAppearance="@style/caption1_Semibold"
+                    android:textColor="@color/white"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/length_public_peace_rv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/month_ll"
+                tools:listitem="@layout/item_public_peace" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <FrameLayout

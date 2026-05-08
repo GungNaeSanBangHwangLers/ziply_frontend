@@ -13,6 +13,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface AuthService {
     // 로그인 (기존 유지)
@@ -172,4 +173,12 @@ interface AuthService {
 
     @GET("/api/v1/users/me")
     suspend fun getUserMe(): retrofit2.Response<UserMeResponse>
+
+    @GET("/api/v1/analysis/news/{searchCardId}")
+    suspend fun getAnalysisNews(
+        @Path("searchCardId") searchCardId: String,
+        @Query("period") period: Int = 3,
+        @Query("level") level: Int = 3,
+        @Query("page") page: Int = 0
+    ): Response<List<NewsResponse>>
 }

@@ -3,10 +3,12 @@ package com.keder.zply
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayoutMediator
@@ -25,8 +27,15 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.widget.ViewPager2
+import com.naver.maps.geometry.LatLng
+import com.naver.maps.geometry.LatLngBounds
+import com.naver.maps.map.CameraUpdate
+import com.naver.maps.map.MapFragment
+import com.naver.maps.map.NaverMap
+import com.naver.maps.map.OnMapReadyCallback
+import com.naver.maps.map.overlay.Marker
 
-class AfterExploreActivity : AppCompatActivity() {
+class AfterExploreActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var binding: ActivityAfterExploreBinding
     private val tabTitles = listOf("직주거리", "방향", "소음", "채광", "안전")
@@ -35,6 +44,24 @@ class AfterExploreActivity : AppCompatActivity() {
     val houseList: List<ScheduleItem> get() = houseMap.values.toList().sortedBy { it.rankLabel }
     var currentCardId: String = ""
     private var isNavigatingBack = false
+
+    // ★ 지도 관련 변수 추가
+    private var isMapExpanded = false
+    private var naverMap: NaverMap? = null
+    private val markerList = mutableListOf<Marker>()
+    private var mapInfoList: List<MapInfoResponse> = emptyList()
+
+    private val fragmentList: List<Fragment> by lazy {
+        listOf(
+            supportFragmentManager.findFragmentByTag("after_tab_0") as? AfterLengthFragment ?: AfterLengthFragment(),
+            supportFragmentManager.findFragmentByTag("after_tab_1") as? AfterDirectionFragment ?: AfterDirectionFragment(),
+            supportFragmentManager.findFragmentByTag("after_tab_2") as? AfterNoiseFragment ?: AfterNoiseFragment(),
+            supportFragmentManager.findFragmentByTag("after_tab_3") as? AfterLightFragment ?: AfterLightFragment(),
+            supportFragmentManager.findFragmentByTag("after_tab_4") as? AfterSafetyFragment ?: AfterSafetyFragment()
+        )
+    }
+
+    private var currentFragmentIndex = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +72,10 @@ class AfterExploreActivity : AppCompatActivity() {
             goBackToMain()
         }
 
-        // 2. 휴대폰 기기 자체의 뒤로가기 제어 추가
+        binding.afterBtnToggleMap.setOnClickListener {
+            toggleMap()
+        }
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 goBackToMain()
@@ -60,7 +90,80 @@ class AfterExploreActivity : AppCompatActivity() {
         }
         currentCardId = cardId
 
+        // ★ 지도 프래그먼트 초기화
+        val fm = supportFragmentManager
+        var mapFragment = fm.findFragmentById(R.id.after_naver_map_fragment) as MapFragment?
+        if (mapFragment == null) {
+            mapFragment = MapFragment.newInstance()
+            fm.beginTransaction().add(R.id.after_naver_map_fragment, mapFragment).commit()
+        }
+        mapFragment.getMapAsync(this)
+
         loadInitialData(cardId)
+    }
+
+    override fun onMapReady(map: NaverMap) {
+        naverMap = map
+        naverMap?.uiSettings?.apply { isZoomControlEnabled = false; isScaleBarEnabled = false }
+        drawMarkersIfReady()
+    }
+
+    private fun toggleMap() {
+        isMapExpanded = !isMapExpanded
+        if (isMapExpanded) {
+            binding.afterLayoutMapContainer.visibility = View.VISIBLE
+            binding.afterTvMapToggle.text = "접기"
+            binding.afterIvMapArrow.setImageResource(R.drawable.ic_arrow_up)
+        } else {
+            binding.afterLayoutMapContainer.visibility = View.GONE
+            binding.afterTvMapToggle.text = "지도로 보기"
+            binding.afterIvMapArrow.setImageResource(R.drawable.ic_arrow_down)
+        }
+    }
+
+    private fun drawMarkersIfReady() {
+        val map = naverMap ?: return
+        if (mapInfoList.isEmpty()) return
+
+        markerList.forEach { it.map = null }
+        markerList.clear()
+
+        val boundsBuilder = LatLngBounds.Builder()
+
+        mapInfoList.forEach { mapInfo ->
+            val position = LatLng(mapInfo.latitude, mapInfo.longitude)
+            val marker = Marker()
+            marker.position = position
+
+            marker.icon = if (mapInfo.label == "기준지" || mapInfo.label == "직장") {
+                com.naver.maps.map.overlay.OverlayImage.fromResource(R.drawable.ic_marker_home)
+            } else {
+                createCustomMarker(mapInfo.label)
+            }
+
+            marker.map = map
+            markerList.add(marker)
+            boundsBuilder.include(position)
+        }
+
+        if (markerList.isNotEmpty()) {
+            map.moveCamera(CameraUpdate.fitBounds(boundsBuilder.build(), 100))
+        }
+    }
+
+    private fun createCustomMarker(rank: String): com.naver.maps.map.overlay.OverlayImage {
+        val view = layoutInflater.inflate(R.layout.item_custom_marker, null)
+        val bgIv = view.findViewById<android.widget.ImageView>(R.id.marker_bg_iv)
+        val textTv = view.findViewById<android.widget.TextView>(R.id.marker_text_tv)
+        textTv.text = rank
+        val rankChar = if (rank.isNotEmpty()) rank[0] else '?'
+        val bgColor = when (rankChar) {
+            'A' -> R.color.brand_100; 'B' -> R.color.brand_400; 'C' -> R.color.brand_700; 'D' -> R.color.brand_950; 'E' -> R.color.white; 'F' -> R.color.gray_400; 'G' -> R.color.gray_700; else -> R.color.gray_200
+        }
+        val textColor = if (rankChar == 'A' || rankChar == 'E' || rankChar == '?') R.color.brand_800 else R.color.white
+        bgIv.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this, bgColor))
+        textTv.setTextColor(ContextCompat.getColor(this, textColor))
+        return com.naver.maps.map.overlay.OverlayImage.fromView(view)
     }
 
     private fun goBackToMain() {
@@ -78,13 +181,14 @@ class AfterExploreActivity : AppCompatActivity() {
             binding.loadingLayout.visibility = View.VISIBLE
             try {
                 val service = RetrofitClient.getInstance(this@AfterExploreActivity)
-                val prefs = getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
 
                 val houseDeferred = async { service.getCardHouseList(cardId) }
                 val addressDeferred = async { service.getCardAddresses(cardId) }
+                val mapDeferred = async { service.getCardMapInfo(cardId) } // ★ 지도 데이터 호출 추가
 
                 val houseRes = houseDeferred.await()
                 val addressRes = addressDeferred.await()
+                val mapRes = mapDeferred.await()
 
                 if (addressRes.isSuccessful && addressRes.body() != null) {
                     val address = addressRes.body()!!
@@ -92,32 +196,41 @@ class AfterExploreActivity : AppCompatActivity() {
                     else binding.afterMyAddressTv.text = "직장 정보 없음"
                 }
 
+                // ★ 지도 데이터 저장 및 마커 그리기
+                if (mapRes.isSuccessful && mapRes.body() != null) {
+                    mapInfoList = mapRes.body()!!
+                    drawMarkersIfReady()
+                }
+
                 if (houseRes.isSuccessful && houseRes.body() != null) {
                     val rawHouses = houseRes.body()!!
                     val sortedHouses = rawHouses.sortedBy { it.visitTime ?: "" }
 
+                    Log.d("API_DEBUG_IMAGE", "========== 서버 이미지 렌더링 시작 (CardID: $cardId) ==========")
+
                     sortedHouses.forEachIndexed { index, house ->
                         val rankChar = ('A'.code + index).toChar().toString()
 
-                        val savedPhotosStr = prefs.getString("photos_${house.houseId}", "") ?: ""
-                        val localPhotos = if (savedPhotosStr.isNotEmpty()) savedPhotosStr.split(",") else emptyList()
                         val serverImages = house.imageUrls ?: emptyList()
 
-                        val combinedImages = (serverImages + localPhotos).distinct().toMutableList()
+                        Log.d("API_DEBUG_IMAGE", "[주거지 $rankChar (ID: ${house.houseId})]")
+                        Log.d("API_DEBUG_IMAGE", " - 렌더링할 서버 이미지: ${serverImages.size}장 -> $serverImages")
 
                         houseMap[house.houseId] = ScheduleItem(
                             houseId = house.houseId,
                             address = house.address ?: "주소 없음",
                             time = house.visitTime?.replace("T", " ")?.take(16) ?: "",
                             rankLabel = rankChar,
-                            imageList = combinedImages
+                            imageList = serverImages.toMutableList()
                         )
                     }
+
+                    Log.d("API_DEBUG_IMAGE", "========== 서버 이미지 렌더링 종료 ==========")
 
                     val sortedList = houseMap.values.toList().sortedBy { it.rankLabel }
 
                     setupCardRecyclerView(sortedList)
-                    setupViewPager()
+                    setupTabs()
                 } else {
                     showCustomToast("데이터를 불러오지 못했어요, 다시 시도해주세요")
                     showErrorOverlay { loadInitialData(cardId) }
@@ -131,7 +244,6 @@ class AfterExploreActivity : AppCompatActivity() {
             }
         }
     }
-
     fun getRankLabel(houseId: Long): String {
         return houseMap[houseId]?.rankLabel ?: "?"
     }
@@ -145,11 +257,9 @@ class AfterExploreActivity : AppCompatActivity() {
     }
 
     private fun setupCardRecyclerView(items: List<ScheduleItem>) {
-        // ★ 1. 기존의 FavoriteViewModel 복구
         val favoriteViewModel = ViewModelProvider(this)[FavoriteViewModel::class.java]
         val favPrefs = getSharedPreferences("ZplyFavorites", Context.MODE_PRIVATE)
 
-        // ★ 2. 최초 실행 시, 기기 저장소(SharedPreferences)의 데이터를 ViewModel에 채워넣기
         val currentFavs = favoriteViewModel.favoriteSet.value ?: emptySet()
         val savedFavs = favPrefs.getStringSet("fav_houses", emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
 
@@ -162,7 +272,6 @@ class AfterExploreActivity : AppCompatActivity() {
         val adapter = AfterCardAdapter(
             items = items,
             onStarClick = { houseId ->
-                // 어댑터 클릭 시 기존처럼 ViewModel을 조작
                 favoriteViewModel.toggleFavorite(houseId)
             },
             onImageClick = { clickedItem, clickedIndex ->
@@ -172,22 +281,62 @@ class AfterExploreActivity : AppCompatActivity() {
         binding.afterCardRv.adapter = adapter
         binding.afterCardRv.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
 
-        // ★ 3. ViewModel의 LiveData를 관찰하여 UI 갱신 + 변경사항을 기기 저장소에 백업
+        favoriteViewModel.favoriteSet.removeObservers(this)
         favoriteViewModel.favoriteSet.observe(this) { favorites ->
             adapter.updateFavorites(favorites)
             favPrefs.edit().putStringSet("fav_houses", favorites.map { it.toString() }.toSet()).apply()
         }
     }
 
-    private fun setupViewPager() {
-        val pagerAdapter = AfterViewPagerAdapter(this)
-        binding.afterViewpager.adapter = pagerAdapter
-        binding.afterViewpager.offscreenPageLimit = 4
+    private fun setupTabs() {
+        tabTitles.forEach { title ->
+            binding.afterTabLayout.addTab(binding.afterTabLayout.newTab().setText(title))
+        }
 
-        TabLayoutMediator(binding.afterTabLayout, binding.afterViewpager) { tab, position ->
-            tab.text = tabTitles[position]
-        }.attach()
+        binding.afterTabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+                tab?.position?.let { replaceFragment(it) }
+            }
+            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+        })
+
+        replaceFragment(0)
     }
+
+
+    private fun replaceFragment(position: Int) {
+        if (currentFragmentIndex == position) return
+
+        // ★ 1. 현재 스크롤 뷰의 Y축 위치를 정확히 기억해 둡니다.
+        val scrollView = binding.root.getChildAt(0) as? androidx.core.widget.NestedScrollView
+        val currentScrollY = scrollView?.scrollY ?: 0
+
+        val transaction = supportFragmentManager.beginTransaction()
+        val targetFragment = fragmentList[position]
+
+        if (!targetFragment.isAdded) {
+            transaction.add(R.id.after_fragment_container, targetFragment, "after_tab_$position")
+        }
+
+        if (currentFragmentIndex != -1) {
+            transaction.hide(fragmentList[currentFragmentIndex])
+        }
+
+        transaction.show(targetFragment)
+
+        // ★ 2. commitNowAllowingStateLoss: 동기 반영하되 state save 이후에도 안전하게 처리
+        transaction.commitNowAllowingStateLoss()
+        currentFragmentIndex = position
+
+        // ★ 3. 리사이클러뷰가 포커스를 뺏어가기 전에 즉시 스크롤을 원래 위치로 되돌립니다.
+        scrollView?.scrollTo(0, currentScrollY)
+        scrollView?.post {
+            // 레이아웃이 다 그려진 후 한 번 더 쐐기를 박아 스크롤 튐을 완벽 차단합니다.
+            scrollView.scrollTo(0, currentScrollY)
+        }
+    }
+
 
     private fun showImageDialog(item: ScheduleItem, startIndex: Int) {
         if (item.imageList.isEmpty()) return
@@ -239,7 +388,7 @@ class AfterExploreActivity : AppCompatActivity() {
             indicatorLl.addView(dots[i])
         }
 
-        imageVp.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+        val pageCallback = object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 for (i in 0 until dotCount) {
                     val drawable = dots[i]?.background as? GradientDrawable
@@ -247,7 +396,9 @@ class AfterExploreActivity : AppCompatActivity() {
                     drawable?.setColor(ContextCompat.getColor(this@AfterExploreActivity, colorRes))
                 }
             }
-        })
+        }
+        imageVp.registerOnPageChangeCallback(pageCallback)
+        dialog.setOnDismissListener { imageVp.unregisterOnPageChangeCallback(pageCallback) }
 
         closeBtn.setOnClickListener { dialog.dismiss() }
         dialog.show()
