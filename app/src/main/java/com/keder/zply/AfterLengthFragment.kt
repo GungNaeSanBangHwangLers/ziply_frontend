@@ -32,6 +32,11 @@ class AfterLengthFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.afterLengthRankTv.visibility = View.INVISIBLE
+        binding.afterLengthRankDesTv.visibility = View.INVISIBLE
+        binding.layoutChips.visibility = View.INVISIBLE
+        binding.afterLengthRankRv.visibility = View.INVISIBLE
+
         binding.btnRetry.setOnClickListener { loadDistanceData() }
         setupChipListeners()
         loadDistanceData()
@@ -44,12 +49,27 @@ class AfterLengthFragment : Fragment() {
         binding.chipBike.setOnClickListener { updateTransportUI(3) }
     }
 
+    private fun showContent() {
+        binding.afterLengthRankTv.visibility = View.VISIBLE
+        binding.afterLengthRankDesTv.visibility = View.VISIBLE
+        binding.layoutChips.visibility = View.VISIBLE
+        binding.afterLengthRankRv.visibility = View.VISIBLE
+        binding.errorLayout.visibility = View.GONE
+    }
+
+    private fun showError() {
+        binding.afterLengthRankTv.visibility = View.GONE
+        binding.afterLengthRankDesTv.visibility = View.GONE
+        binding.layoutChips.visibility = View.GONE
+        binding.afterLengthRankRv.visibility = View.GONE
+        binding.tvTransportInfo.visibility = View.GONE
+        binding.errorLayout.visibility = View.VISIBLE
+    }
+
     private fun loadDistanceData() {
         val activity = requireActivity() as? AfterExploreActivity ?: return
         val cardId = activity.currentCardId
         if (cardId.isEmpty()) return
-
-        binding.errorLayout.visibility = View.GONE
 
         lifecycleScope.launch {
             try {
@@ -80,15 +100,16 @@ class AfterLengthFragment : Fragment() {
                             adapter.updateFavorites(favorites)
                         }
 
+                        showContent()
                         updateTransportUI(0)
                     } else {
-                        binding.errorLayout.visibility = View.VISIBLE
+                        showError()
                     }
                 } else {
-                    binding.errorLayout.visibility = View.VISIBLE
+                    showError()
                 }
             } catch (e: Exception) {
-                binding.errorLayout.visibility = View.VISIBLE
+                showError()
             }
         }
     }

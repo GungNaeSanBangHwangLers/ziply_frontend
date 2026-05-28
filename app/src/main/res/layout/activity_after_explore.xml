@@ -142,7 +142,6 @@
                 android:id="@+id/after_tab_layout"
                 android:layout_width="match_parent"
                 android:layout_height="36dp"
-                android:layout_marginHorizontal="20dp"
                 android:layout_marginBottom="30dp"
                 android:background="@android:color/transparent"
                 app:tabIndicatorColor="@color/brand_500"

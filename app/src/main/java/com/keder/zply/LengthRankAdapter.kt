@@ -80,12 +80,12 @@ class LengthRankAdapter(
             // ==========================================
             if (time == 0) {
                 binding.itemMinuteTv.text = "도보가 더 빨라요"
-                // 0분일 때: caption2_Semibold 적용
                 TextViewCompat.setTextAppearance(binding.itemMinuteTv, R.style.caption2_Semibold)
+                binding.itemMinuteTv.setTextColor(ContextCompat.getColor(context, R.color.white))
             } else {
                 binding.itemMinuteTv.text = "${time}분"
-                // 0분이 아닐 때: 기존 caption1_Semibold 적용
                 TextViewCompat.setTextAppearance(binding.itemMinuteTv, R.style.caption1_Semibold)
+                binding.itemMinuteTv.setTextColor(ContextCompat.getColor(context, R.color.white))
             }
 
             // ==========================================

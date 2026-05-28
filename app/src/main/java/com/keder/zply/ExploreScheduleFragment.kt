@@ -73,6 +73,7 @@ class ExploreScheduleFragment : Fragment() {
         }
 
         binding.addressNextBtnMb.isEnabled = false
+        binding.loadingLayout.visibility = View.VISIBLE
 
         lifecycleScope.launch {
             try {
@@ -90,31 +91,27 @@ class ExploreScheduleFragment : Fragment() {
 
                 val response = RetrofitClient.getInstance(requireContext()).createReviewCard(request)
 
-                if (response.isSuccessful && response.body() != null) {
+                if (response.isSuccessful) {
                     draftPref.edit().clear().apply()
                     scheduleList.clear()
 
-                    // ★ 핵심 수정: 앱을 끄지 않고, 현재 떠있는 프래그먼트들을 모두 치워버립니다.
-                    parentFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
-
-                    // 메인 화면 갱신을 위해 Intent를 날립니다.
                     val intent = Intent(requireContext(), MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
                     startActivity(intent)
 
-                    // (기존에 앱을 끄던 requireActivity().finish() 코드를 삭제했습니다!)
-
                 } else {
+                    binding.loadingLayout.visibility = View.GONE
+                    binding.addressNextBtnMb.isEnabled = true
                     if (response.code() == 400) {
                         showCustomToast("올바른 주소를 입력해주세요")
                     } else {
                         showCustomToast("등록에 실패했어요. 다시 시도해주세요")
                     }
-                    binding.addressNextBtnMb.isEnabled = true
                 }
             } catch (e: Exception) {
-                showCustomToast("등록에 실패했어요. 다시 시도해주세요")
+                binding.loadingLayout.visibility = View.GONE
                 binding.addressNextBtnMb.isEnabled = true
+                showCustomToast("등록에 실패했어요. 다시 시도해주세요")
             }
         }
     }
