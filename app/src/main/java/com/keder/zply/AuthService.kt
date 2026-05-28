@@ -30,7 +30,7 @@ interface AuthService {
 
     // 카드 생성 (기존 유지)
     @POST("api/v1/review/card")
-    suspend fun createReviewCard(@Body request: ReviewCardRequest) : Response<String>
+    suspend fun createReviewCard(@Body request: ReviewCardRequest) : Response<Void>
 
     // [변경] 집 목록 조회 (Response Model에 label 추가됨)
     // Path param 이름을 명세서에 맞춰 searchCardId로 변경 (기존 cardId여도 동작은 함)

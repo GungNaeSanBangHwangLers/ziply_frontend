@@ -232,7 +232,7 @@ class AddScheduleBottomSheet : BottomSheetDialogFragment() {
         val onNextOrSaveClick = {
             when (currentStep) {
                 0 -> if (binding.scheduleInputEt.text.isNotBlank()) moveStepTo(1)
-                1 -> if (selectedDate != null) moveStepTo(2)
+                1 -> if (selectedDate != null) moveStepTo(2) else showCustomToast("날짜를 선택해 주세요")
                 2 -> if (isEditMode) updateHouseOnServer() else validateAndSave()
             }
         }

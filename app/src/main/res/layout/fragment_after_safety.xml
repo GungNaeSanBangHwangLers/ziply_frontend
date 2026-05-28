@@ -61,6 +61,31 @@
 <!--                android:textStyle="bold"/>-->
 <!--        </LinearLayout>-->
 
+        <LinearLayout
+            android:id="@+id/error_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginTop="60dp"
+            app:layout_constraintTop_toBottomOf="@id/after_safety_des_tv"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="데이터를 불러오지 못했습니다."
+                android:textColor="@color/gray_400"/>
+            <Button
+                android:id="@+id/btn_retry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="새로고침"
+                android:textColor="@color/white"
+                android:layout_marginTop="10dp"/>
+        </LinearLayout>
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/graph_container"
             android:layout_width="match_parent"
@@ -106,6 +131,12 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/barrier_graph"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="graph_container,error_layout"/>
 
         <TextView
             android:id="@+id/public_peace_tv"
@@ -116,7 +147,7 @@
             android:textColor="@color/white"
             android:layout_marginTop="40dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/graph_container"/>
+            app:layout_constraintTop_toBottomOf="@id/barrier_graph"/>
 
         <TextView
             android:id="@+id/public_peace_desc_tv"

@@ -75,6 +75,10 @@ class ExistingInfoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         if (cardId.isEmpty()) return
 
+        binding.btnRetryDistance.setOnClickListener { loadAllDataSafe() }
+        binding.btnRetryNoise.setOnClickListener { loadAllDataSafe() }
+        binding.btnRetrySafety.setOnClickListener { loadAllDataSafe() }
+
         setupListeners()
         setupPublicPeaceSection()
         updateTabUI()
@@ -85,8 +89,11 @@ class ExistingInfoFragment : Fragment() {
     }
 
     fun refreshDataIfNeeded() {
+        Log.d("EXISTING_DEBUG", "refreshDataIfNeeded() 호출 — cardId=$cardId, isDataLoading=$isDataLoading")
         if (cardId.isNotEmpty() && !isDataLoading) {
             loadAllDataSafe()
+        } else {
+            Log.w("EXISTING_DEBUG", "loadAllDataSafe() 건너뜀 — cardId 비어있음=${cardId.isEmpty()}, isDataLoading=$isDataLoading")
         }
     }
 
@@ -254,35 +261,19 @@ class ExistingInfoFragment : Fragment() {
         }
         lengthAdapter.setMode(mode)
 
-        val brand700 = ContextCompat.getColor(ctx, R.color.brand_700)
-        val shortestItem = sortedList.firstOrNull()
-
-        if (shortestItem != null) {
-            val rank = shortestItem.rankLabel
-            val time = when (mode) {
-                0 -> shortestItem.walkingTimeMin
-                1 -> shortestItem.transitTimeMin
-                2 -> shortestItem.carTimeMin
-                3 -> shortestItem.bicycleTimeMin
-                else -> shortestItem.walkingTimeMin
-            }
-
-            // 2. 도보가 아닌데 시간이 0분이면 "도보가 더 빨라요" 문구를 띄웁니다!
-            if (mode != 0 && time == 0) {
-                val text = "${rank}는 경로가 없어\n도보가 더 빨라요"
-                val spannable = SpannableString(text)
-                val idx = text.indexOf(rank)
-                if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                safeBinding.lengthRankTv.text = spannable
-            } else {
+        if (mode == 0) {
+            val brand700 = ContextCompat.getColor(ctx, R.color.brand_700)
+            val shortestItem = sortedList.firstOrNull()
+            if (shortestItem != null) {
+                val rank = shortestItem.rankLabel
                 val text = "직주거리는 $rank 가 \n가장 짧아요"
                 val spannable = SpannableString(text)
                 val idx = text.indexOf(rank)
                 if (idx != -1) spannable.setSpan(ForegroundColorSpan(brand700), idx, idx + rank.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 safeBinding.lengthRankTv.text = spannable
+            } else {
+                safeBinding.lengthRankTv.text = "경로를 찾을 수 없어요"
             }
-        } else {
-            safeBinding.lengthRankTv.text = "경로를 찾을 수 없어요"
         }
     }
 
@@ -336,7 +327,7 @@ class ExistingInfoFragment : Fragment() {
             val level = item.categoryLevel
             when (selectedNewsTab) {
                 0 -> level.contains("생활 불편") || level.contains("무질서")
-                1 -> level.contains("안전 불안")
+                1 -> level.contains("안전 불안") || level.contains("재산 위협")
                 2 -> level.contains("신변 위협") || level.contains("강력 범죄")
                 else -> false
             }
@@ -418,48 +409,87 @@ class ExistingInfoFragment : Fragment() {
     }
 
     private fun loadAllDataSafe() {
-        val ctx = context ?: return
+        val ctx = context ?: run {
+            Log.e("EXISTING_DEBUG", "loadAllDataSafe() 조기 종료 — context null")
+            return
+        }
         isDataLoading = true
+        Log.d("EXISTING_DEBUG", "loadAllDataSafe() 시작 — cardId=$cardId")
         lifecycleScope.launch {
             _binding?.loadingLayout?.visibility = View.VISIBLE
             val service = RetrofitClient.getInstance(ctx)
             val prefs = ctx.getSharedPreferences("ZplyMeasurementPrefs", Context.MODE_PRIVATE)
 
             try {
-                val houses = try { service.getCardHouseList(cardId).body() ?: emptyList() } catch (e: Exception) { emptyList() }
+                // ── 집 목록 ──────────────────────────────────────────
+                val housesRaw = try {
+                    val r = service.getCardHouseList(cardId)
+                    Log.d("EXISTING_DEBUG", "[집목록] code=${r.code()} bodySize=${r.body()?.size}")
+                    if (!r.isSuccessful) Log.e("EXISTING_DEBUG", "[집목록] 에러바디=${r.errorBody()?.string()}")
+                    r.body() ?: emptyList()
+                } catch (e: Exception) {
+                    Log.e("EXISTING_DEBUG", "[집목록] 예외: ${e.message}", e)
+                    emptyList()
+                }
+                val houses: List<HouseResponse> = housesRaw
 
-                val addressRes = try { service.getCardAddresses(cardId).body() } catch (e: Exception) { null }
+                // ── 회사 주소 ──────────────────────────────────────────
+                val addressRes = try {
+                    val r = service.getCardAddresses(cardId)
+                    Log.d("EXISTING_DEBUG", "[주소] code=${r.code()} bodySize=${r.body()?.size}")
+                    r.body()
+                } catch (e: Exception) {
+                    Log.e("EXISTING_DEBUG", "[주소] 예외: ${e.message}", e)
+                    null
+                }
                 var companyAddr = "직장 정보 없음"
                 if (!addressRes.isNullOrEmpty()) {
                     companyAddr = addressRes[0].address ?: "직장 정보 없음"
                 }
                 _binding?.lengthRankDesTv?.text = "[$companyAddr]부터 각 주거지까지의 거리예요."
 
-                Log.d("API_DEBUG_DISTANCE", "========== 직주거리 데이터 로드 시작 (CardID: $cardId) ==========")
-                val distBody = try {
-                    service.getAnalysisDistance(cardId).body()?.firstOrNull()
+                // ── 직주거리 ──────────────────────────────────────────
+                Log.d("EXISTING_DEBUG", "[직주거리] API 호출 시작")
+                val distRaw = try {
+                    val r = service.getAnalysisDistance(cardId)
+                    Log.d("EXISTING_DEBUG", "[직주거리] code=${r.code()} bodySize=${r.body()?.size}")
+                    if (!r.isSuccessful) Log.e("EXISTING_DEBUG", "[직주거리] 에러바디=${r.errorBody()?.string()}")
+                    r.body()
                 } catch (e: Exception) {
-                    Log.e("API_DEBUG_DISTANCE", "거리 데이터 API 호출 에러", e)
+                    Log.e("EXISTING_DEBUG", "[직주거리] 예외: ${e.message}", e)
                     null
                 }
-
-                Log.d("API_DEBUG_DISTANCE", "서버 응답 Body 전체: $distBody")
+                val distBody = distRaw?.firstOrNull()
+                Log.d("EXISTING_DEBUG", "[직주거리] distBody=$distBody")
+                Log.d("EXISTING_DEBUG", "[직주거리] results 수=${distBody?.results?.size ?: 0}")
+                distBody?.results?.forEach { dist ->
+                    Log.d("EXISTING_DEBUG", "[직주거리] houseId=${dist.houseId} 도보=${dist.walkingTimeMin}분 대중교통=${dist.transitTimeMin}분 자동차=${dist.carTimeMin}분 자전거=${dist.bicycleTimeMin}분")
+                }
 
                 transportMessage = distBody?.transportMessage ?: ""
                 bicycleMessage = distBody?.bicycleMessage ?: ""
-                Log.d("API_DEBUG_DISTANCE", "대중교통 메시지: $transportMessage")
-                Log.d("API_DEBUG_DISTANCE", "자전거 메시지: $bicycleMessage")
 
                 val distanceMap = distBody?.results?.associateBy { it.houseId } ?: emptyMap()
 
-                distanceMap.forEach { (houseId, dist) ->
-                    Log.d("API_DEBUG_DISTANCE", "[House ID: $houseId] 도보: ${dist.walkingTimeMin}분, 대중교통: ${dist.transitTimeMin}분, 자동차: ${dist.carTimeMin}분, 자전거: ${dist.bicycleTimeMin}분")
+                // ── 소음/생활 ──────────────────────────────────────────
+                val lifeMap = try {
+                    val r = service.getAnalysisLife(cardId)
+                    Log.d("EXISTING_DEBUG", "[소음] code=${r.code()} bodySize=${r.body()?.size}")
+                    r.body()?.associateBy { it.houseId } ?: emptyMap()
+                } catch (e: Exception) {
+                    Log.e("EXISTING_DEBUG", "[소음] 예외: ${e.message}", e)
+                    emptyMap()
                 }
-                Log.d("API_DEBUG_DISTANCE", "========== 직주거리 데이터 로드 종료 ==========")
 
-                val lifeMap = try { service.getAnalysisLife(cardId).body()?.associateBy { it.houseId } ?: emptyMap() } catch (e: Exception) { emptyMap() }
-
-                val safetyRes = try { service.getAnalysisSafety(cardId).body() } catch (e: Exception) { null }
+                // ── 안전 ──────────────────────────────────────────────
+                val safetyRes = try {
+                    val r = service.getAnalysisSafety(cardId)
+                    Log.d("EXISTING_DEBUG", "[안전] code=${r.code()} bodySize=${r.body()?.size}")
+                    r.body()
+                } catch (e: Exception) {
+                    Log.e("EXISTING_DEBUG", "[안전] 예외: ${e.message}", e)
+                    null
+                }
 
                 val sortedHouses = houses.sortedBy { it.visitTime ?: "" }
                 val detailList = mutableListOf<ScheduleItem>()
@@ -515,9 +545,42 @@ class ExistingInfoFragment : Fragment() {
                 }
 
                 originalScheduleList = detailList.sortedBy { it.rankLabel }
+
+                val hasDistanceData = distBody?.results?.isNotEmpty() == true
+                val hasNoiseData = lifeMap.isNotEmpty()
+
+                if (hasDistanceData) {
+                    _binding?.errorLayoutDistance?.visibility = View.GONE
+                    _binding?.lengthRankTv?.visibility = View.VISIBLE
+                    _binding?.lengthRankDesTv?.visibility = View.VISIBLE
+                    _binding?.layoutChips?.visibility = View.VISIBLE
+                    _binding?.lengthRankRv?.visibility = View.VISIBLE
+                } else {
+                    _binding?.lengthRankTv?.visibility = View.GONE
+                    _binding?.lengthRankDesTv?.visibility = View.GONE
+                    _binding?.layoutChips?.visibility = View.GONE
+                    _binding?.lengthRankRv?.visibility = View.GONE
+                    _binding?.tvTransportInfo?.visibility = View.GONE
+                    _binding?.errorLayoutDistance?.visibility = View.VISIBLE
+                }
+
+                if (hasNoiseData) {
+                    _binding?.errorLayoutNoise?.visibility = View.GONE
+                    _binding?.noiseTv?.visibility = View.VISIBLE
+                    _binding?.noiseDesTv?.visibility = View.VISIBLE
+                    _binding?.tabDayNightContainer?.visibility = View.VISIBLE
+                    _binding?.graphContainer?.visibility = View.VISIBLE
+                } else {
+                    _binding?.noiseTv?.visibility = View.GONE
+                    _binding?.noiseDesTv?.visibility = View.GONE
+                    _binding?.tabDayNightContainer?.visibility = View.GONE
+                    _binding?.graphContainer?.visibility = View.GONE
+                    _binding?.errorLayoutNoise?.visibility = View.VISIBLE
+                }
+
                 setupRecyclerViews(originalScheduleList)
                 updateSummaries(originalScheduleList)
-                updateTransportUI(0)
+                if (hasDistanceData) updateTransportUI(0)
 
                 val safetyUiList = safetyRes?.map { safety ->
                     ScheduleItem(
@@ -532,14 +595,38 @@ class ExistingInfoFragment : Fragment() {
                 }?.sortedBy { it.rankLabel } ?: emptyList()
 
                 if (safetyUiList.isNotEmpty()) {
+                    _binding?.errorLayoutSafety?.visibility = View.GONE
+                    _binding?.safetyTv?.visibility = View.VISIBLE
+                    _binding?.safetyDesTv?.visibility = View.VISIBLE
+                    _binding?.safetyGraphContainer?.visibility = View.VISIBLE
+                    _binding?.publicPeaceTv?.visibility = View.VISIBLE
+                    _binding?.publicPeaceDescTv?.visibility = View.VISIBLE
+                    _binding?.lifeBtn?.visibility = View.VISIBLE
+                    _binding?.safeBtn?.visibility = View.VISIBLE
+                    _binding?.oneselfBtn?.visibility = View.VISIBLE
+                    _binding?.monthLl?.visibility = View.VISIBLE
                     setupSafetyGraph(safetyUiList)
                     updateSafetySummaryText(safetyUiList)
+                } else {
+                    _binding?.safetyTv?.visibility = View.GONE
+                    _binding?.safetyDesTv?.visibility = View.GONE
+                    _binding?.safetyGraphContainer?.visibility = View.GONE
+                    _binding?.errorLayoutSafety?.visibility = View.VISIBLE
+                    _binding?.publicPeaceTv?.visibility = View.GONE
+                    _binding?.publicPeaceDescTv?.visibility = View.GONE
+                    _binding?.lifeBtn?.visibility = View.GONE
+                    _binding?.safeBtn?.visibility = View.GONE
+                    _binding?.oneselfBtn?.visibility = View.GONE
+                    _binding?.monthLl?.visibility = View.GONE
+                    _binding?.lengthPublicPeaceRv?.visibility = View.GONE
                 }
 
                 loadNewsData()
 
+                Log.d("EXISTING_DEBUG", "loadAllDataSafe() 정상 완료 — originalScheduleList.size=${originalScheduleList.size}")
+
             } catch (e: Exception) {
-                Log.e("ExistingInfo", "렌더링 에러", e)
+                Log.e("EXISTING_DEBUG", "loadAllDataSafe() 예외 발생: ${e.javaClass.simpleName} — ${e.message}", e)
                 isDataLoading = false
                 showErrorOverlay { loadAllDataSafe() }
             } finally {

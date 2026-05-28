@@ -33,8 +33,8 @@ class AfterSafetyFragment : Fragment() {
 
         // categoryLevel 분류
         private fun getTabForCategory(categoryLevel: String): Int = when {
-            categoryLevel.contains("안전 불안") -> 1
             categoryLevel.contains("생활 불편") || categoryLevel.contains("무질서") -> 0
+            categoryLevel.contains("안전 불안") || categoryLevel.contains("재산 위협") -> 1
             categoryLevel.contains("신변 위협") || categoryLevel.contains("강력 범죄") -> 2
             else -> -1
         }
@@ -47,10 +47,51 @@ class AfterSafetyFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        hideGraphContent()
+        binding.btnRetry.setOnClickListener { loadSafetyData() }
         setupPublicPeaceRecycler()
         setupPublicPeaceListeners()
         loadSafetyData()
         loadNewsData()
+    }
+
+    private fun showGraphContent() {
+        binding.afterSafetyTv.visibility = View.VISIBLE
+        binding.afterSafetyDesTv.visibility = View.VISIBLE
+        binding.graphContainer.visibility = View.VISIBLE
+        binding.errorLayout.visibility = View.GONE
+        binding.publicPeaceTv.visibility = View.VISIBLE
+        binding.publicPeaceDescTv.visibility = View.VISIBLE
+        binding.lifeBtn.visibility = View.VISIBLE
+        binding.safeBtn.visibility = View.VISIBLE
+        binding.oneselfBtn.visibility = View.VISIBLE
+        binding.monthLl.visibility = View.VISIBLE
+    }
+
+    private fun hideGraphContent() {
+        binding.afterSafetyTv.visibility = View.INVISIBLE
+        binding.afterSafetyDesTv.visibility = View.INVISIBLE
+        binding.graphContainer.visibility = View.INVISIBLE
+        binding.publicPeaceTv.visibility = View.INVISIBLE
+        binding.publicPeaceDescTv.visibility = View.INVISIBLE
+        binding.lifeBtn.visibility = View.INVISIBLE
+        binding.safeBtn.visibility = View.INVISIBLE
+        binding.oneselfBtn.visibility = View.INVISIBLE
+        binding.monthLl.visibility = View.INVISIBLE
+    }
+
+    private fun showGraphError() {
+        binding.afterSafetyTv.visibility = View.GONE
+        binding.afterSafetyDesTv.visibility = View.GONE
+        binding.graphContainer.visibility = View.GONE
+        binding.errorLayout.visibility = View.VISIBLE
+        binding.publicPeaceTv.visibility = View.GONE
+        binding.publicPeaceDescTv.visibility = View.GONE
+        binding.lifeBtn.visibility = View.GONE
+        binding.safeBtn.visibility = View.GONE
+        binding.oneselfBtn.visibility = View.GONE
+        binding.monthLl.visibility = View.GONE
+        binding.lengthPublicPeaceRv.visibility = View.GONE
     }
 
     private fun loadSafetyData() {
@@ -73,12 +114,18 @@ class AfterSafetyFragment : Fragment() {
                     }.sortedBy { it.rankLabel }
 
                     if (uiList.isNotEmpty()) {
+                        showGraphContent()
                         setupGraph(uiList)
                         updateSafetySummaryText(uiList)
+                    } else {
+                        showGraphError()
                     }
+                } else {
+                    showGraphError()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ [안전] 예외 발생: ${e.message}", e)
+                showGraphError()
             }
         }
     }

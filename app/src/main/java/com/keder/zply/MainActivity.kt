@@ -53,8 +53,6 @@ class MainActivity : AppCompatActivity() {
 
         binding.emptyCardAddBtn.setOnClickListener { openAddressFragment() }
         binding.errorMainReloadBt.setOnClickListener { fetchMainData() }
-
-        binding.btnResetTop.setOnClickListener { resetData() }
         binding.btnResetBottom.setOnClickListener { resetData() }
     }
 
@@ -229,8 +227,6 @@ class MainActivity : AppCompatActivity() {
                             if (hasValidData) {
                                 binding.mainChecklistRv.visibility = View.VISIBLE
                                 binding.tvEmptyChecklist.visibility = View.GONE
-
-                                binding.btnResetTop.visibility = View.GONE
                                 binding.btnResetBottom.visibility = View.VISIBLE
 
                                 val sortedChecklist = body.map { group ->
@@ -258,18 +254,12 @@ class MainActivity : AppCompatActivity() {
 
                             } else {
                                 showEmptyChecklistState()
-                                binding.btnResetTop.visibility = View.VISIBLE
-                                binding.btnResetBottom.visibility = View.GONE
                             }
                         } else {
                             showEmptyChecklistState()
-                            binding.btnResetTop.visibility = View.VISIBLE
-                            binding.btnResetBottom.visibility = View.GONE
                         }
                     } catch (e: Exception) {
                         showEmptyChecklistState()
-                        binding.btnResetTop.visibility = View.VISIBLE
-                        binding.btnResetBottom.visibility = View.GONE
                     }
 
                     setViewState("SUCCESS")
@@ -290,9 +280,6 @@ class MainActivity : AppCompatActivity() {
         binding.bottomBtnContainer.visibility = View.GONE
         binding.mainExploreCountTv.text = "오늘 탐색 예정 주거가\n0개 있어요"
         showEmptyChecklistState()
-
-        binding.btnResetTop.visibility = View.GONE
-        binding.btnResetBottom.visibility = View.GONE
     }
 
     private fun getStatusPriorityFromDate(dateString: String): Int {
@@ -323,6 +310,7 @@ class MainActivity : AppCompatActivity() {
     private fun showEmptyChecklistState() {
         binding.mainChecklistRv.visibility = View.GONE
         binding.tvEmptyChecklist.visibility = View.VISIBLE
+        binding.btnResetBottom.visibility = View.GONE
     }
 
     private suspend fun getMappedCardDataWithAddress(cards: List<ReviewCardResponse>): List<MainCardData> {

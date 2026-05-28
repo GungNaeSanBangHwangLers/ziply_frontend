@@ -32,8 +32,33 @@ class AfterNoiseFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        hideContent()
+        binding.btnRetry.setOnClickListener { loadNoiseData() }
         loadNoiseData()
         setupDayNightButtons()
+    }
+
+    private fun showContent() {
+        binding.afterNoiseTv.visibility = View.VISIBLE
+        binding.afterNoiseDesTv.visibility = View.VISIBLE
+        binding.tabDayNightContainer.visibility = View.VISIBLE
+        binding.graphContainer.visibility = View.VISIBLE
+        binding.errorLayout.visibility = View.GONE
+    }
+
+    private fun hideContent() {
+        binding.afterNoiseTv.visibility = View.INVISIBLE
+        binding.afterNoiseDesTv.visibility = View.INVISIBLE
+        binding.tabDayNightContainer.visibility = View.INVISIBLE
+        binding.graphContainer.visibility = View.INVISIBLE
+    }
+
+    private fun showError() {
+        binding.afterNoiseTv.visibility = View.GONE
+        binding.afterNoiseDesTv.visibility = View.GONE
+        binding.tabDayNightContainer.visibility = View.GONE
+        binding.graphContainer.visibility = View.GONE
+        binding.errorLayout.visibility = View.VISIBLE
     }
 
     private fun loadNoiseData() {
@@ -57,12 +82,18 @@ class AfterNoiseFragment : Fragment() {
                     }.sortedBy { it.rankLabel }
 
                     if (uiList.isNotEmpty()) {
+                        showContent()
                         setupGraph(uiList)
                         updateNoiseSummaryText(uiList)
+                    } else {
+                        showError()
                     }
+                } else {
+                    showError()
                 }
             } catch (e: Exception) {
                 Log.e("API_AFTER_NOISE", "❌ [소음] 예외 발생: ${e.message}", e)
+                showError()
             }
         }
     }

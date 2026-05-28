@@ -121,13 +121,13 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/layout_checklist_container"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
                 android:background="@drawable/bg_bottom_sheet"
                 android:backgroundTint="@color/gray_800"
                 android:paddingHorizontal="26dp"
                 android:paddingTop="30dp"
-                app:layout_constraintBottom_toBottomOf="parent"
+                android:paddingBottom="40dp"
                 app:layout_constraintTop_toBottomOf="@id/barrier_cards">
 
                 <LinearLayout
@@ -174,7 +174,37 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"/>
 
+                <LinearLayout
+                    android:id="@+id/btn_reset_bottom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="300dp"
+                    app:layout_constraintTop_toBottomOf="@id/main_checklist_rv"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="데이터 삭제하기"
+                        android:textAppearance="@style/caption1_Median"
+                        android:textColor="@color/gray_500"/>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/gray_500" />
+                </LinearLayout>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:background="@color/gray_800"
+                app:layout_constraintTop_toBottomOf="@id/layout_checklist_container"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
@@ -187,29 +217,6 @@
         android:padding="20dp"
         android:layout_marginBottom="10dp"
         app:layout_constraintBottom_toBottomOf="parent">
-
-        <LinearLayout
-            android:id="@+id/btn_reset_bottom"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_vertical"
-            android:visibility="gone"
-            android:layout_marginBottom="40dp"
-            app:layout_constraintBottom_toTopOf="@id/main_plus_btn"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="데이터 삭제하기"
-                android:textAppearance="@style/caption1_Median"
-                android:textColor="@color/gray_500"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/gray_500" />
-        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/main_plus_btn"
